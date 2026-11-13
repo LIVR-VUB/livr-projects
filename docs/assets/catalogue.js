@@ -213,10 +213,10 @@
   // ----------------------------------------------------------------- init
   function init() {
     const pub = document.getElementById("catalogue");
-    if (pub) renderPublic(pub);
+    if (pub && !pub.dataset.ready) { pub.dataset.ready = "1"; renderPublic(pub); }
     const mem = document.getElementById("members");
-    if (mem) renderMembers(mem);
+    if (mem && !mem.dataset.ready) { mem.dataset.ready = "1"; renderMembers(mem); }
   }
-  // Works with Material's instant navigation and with plain page loads.
-  if (window.document$) window.document$.subscribe(init); else document.addEventListener("DOMContentLoaded", init);
+  if (window.document$) window.document$.subscribe(init);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();

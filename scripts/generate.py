@@ -233,6 +233,21 @@ hide:
 Type to search, click a type or a tag to filter. Click a tag again to remove it.
 
 <div id="catalogue">Loading…</div>
+
+<script>
+/* Self-heal: if the browser used an old cached catalogue.js, load a fresh copy. */
+setTimeout(function () {
+  var box = document.getElementById("catalogue");
+  if (!box || box.dataset.ready) return;
+  var old = document.querySelector('script[src*="catalogue.js"]');
+  var s = document.createElement("script");
+  s.src = (old ? old.src.split("?")[0] : "../assets/catalogue.js") + "?fresh=" + Date.now();
+  document.body.appendChild(s);
+  setTimeout(function () {
+    if (!box.dataset.ready) box.innerHTML = "Still loading. Please press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> to refresh.";
+  }, 4000);
+}, 1500);
+</script>
 """)
 
     # members-only page: data is fetched in the browser with the member's token
@@ -253,6 +268,21 @@ search:
 <div id="members">Loading…</div>
 
 <noscript>This page needs JavaScript.</noscript>
+
+<script>
+/* Self-heal: if the browser used an old cached catalogue.js, load a fresh copy. */
+setTimeout(function () {
+  var box = document.getElementById("members");
+  if (!box || box.dataset.ready) return;
+  var old = document.querySelector('script[src*="catalogue.js"]');
+  var s = document.createElement("script");
+  s.src = (old ? old.src.split("?")[0] : "../assets/catalogue.js") + "?fresh=" + Date.now();
+  document.body.appendChild(s);
+  setTimeout(function () {
+    if (!box.dataset.ready) box.innerHTML = "Still loading. Please press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> to refresh.";
+  }, 4000);
+}, 1500);
+</script>
 """)
 
     # mkdocs.yml = base + nav
