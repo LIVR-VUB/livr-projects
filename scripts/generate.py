@@ -82,6 +82,8 @@ def clean(r):
         "private": bool(r.get("private")),
         "archived": bool(r.get("archived")),
         "fork": bool(r.get("fork")),
+        **({"languages": r["languages"]} if "languages" in r else {}),
+        **({"contributors": r["contributors"]} if "contributors" in r else {}),
     }
 
 
@@ -113,6 +115,89 @@ def card(p, base):
 
 def grid(cards):
     return '<div class="lp-grid">\n' + "\n".join(cards) + "\n</div>\n"
+
+
+def safe_gh(path, token):
+    """GitHub call that returns None instead of failing (empty repos answer 204)."""
+    try:
+        return gh(path, token)
+    except (urllib.error.HTTPError, json.JSONDecodeError):
+        return None
+
+
+# Plain-language notes for biologists: what each language is typically used for.
+LANGUAGE_NOTES = {
+    "Python": "General-purpose; image analysis, machine learning, data processing",
+    "R": "Statistics, differential expression, plotting",
+    "Jupyter Notebook": "Interactive analyses combining code, figures and notes",
+    "Shell": "Command-line scripts, for example HPC job submission",
+    "Nextflow": "Reproducible bioinformatics pipelines",
+    "Groovy": "Pipeline configuration (used by Nextflow)",
+    "Dockerfile": "Recipes for software containers",
+    "JavaScript": "Interactive web tools and visualisations",
+    "TypeScript": "Interactive web tools",
+    "HTML": "Web pages and reports",
+    "CSS": "Styling of web pages and reports",
+    "MATLAB": "Numerical analysis and image processing",
+    "Java": "Desktop tools, for example ImageJ/Fiji plugins",
+    "C++": "High-performance numerical code",
+    "C": "High-performance numerical code",
+    "Julia": "High-performance scientific computing",
+    "Makefile": "Build and workflow automation",
+    "Perl": "Text processing in older bioinformatics tools",
+    "Rust": "High-performance tools",
+    "Go": "Command-line tools and services",
+    "TeX": "Manuscripts and documents",
+    "Rich Text Format": "Documents",
+    "ImageJ Macro": "Automation of ImageJ/Fiji image analysis",
+}
+
+
+def languages_widget(projects, top=8):
+    totals, repo_count = {}, {}
+    for p in projects:
+        langs = p.get("languages") or ({p["language"]: 1} if p.get("language") else {})
+        for lang, size in langs.items():
+            totals[lang] = totals.get(lang, 0) + size
+            repo_count[lang] = repo_count.get(lang, 0) + 1
+    if not totals:
+        return '<p class="lp-empty">No language information available.</p>'
+    grand = sum(totals.values())
+    ranked = sorted(totals, key=lambda l: -totals[l])[:top]
+    rows = []
+    for lang in ranked:
+        pct = 100 * totals[lang] / grand
+        note = LANGUAGE_NOTES.get(lang, "")
+        rows.append(
+            f'<div class="lp-lang"><div class="lp-lang-head"><span class="lp-lang-name">{esc(lang)}</span>'
+            f'<span class="lp-lang-num">{repo_count[lang]} {"repository" if repo_count[lang] == 1 else "repositories"}'
+            f' · {pct:.0f}% of code</span></div>'
+            f'<div class="lp-bar"><span style="width:{max(pct, 1.5):.1f}%"></span></div>'
+            + (f'<div class="lp-lang-note">{esc(note)}</div>' if note else "") + '</div>')
+    return "\n".join(rows)
+
+
+def contributors_widget(projects, top=10):
+    people = {}
+    for p in projects:
+        for c in p.get("contributors", []):
+            e = people.setdefault(c["login"], {**c, "commits": 0, "repos": []})
+            e["commits"] += c["commits"]
+            e["repos"].append(p["name"])
+    if not people:
+        return '<p class="lp-empty">No contributor information available.</p>', 0
+    ranked = sorted(people.values(), key=lambda e: (-len(e["repos"]), -e["commits"]))[:top]
+    rows = []
+    for e in ranked:
+        n = len(e["repos"])
+        main = ", ".join(e["repos"][:2]) + (f" and {n - 2} more" if n > 2 else "")
+        rows.append(
+            f'<a class="lp-person" href="{esc(e["url"])}">'
+            f'<img src="{esc(e["avatar"])}&s=96" alt="" loading="lazy" width="40" height="40">'
+            f'<span class="lp-person-text"><span class="lp-person-name">{esc(e["login"])}</span>'
+            f'<span class="lp-person-meta">{n} {"repository" if n == 1 else "repositories"} · '
+            f'{e["commits"]:,} commits</span><span class="lp-person-repos">{esc(main)}</span></span></a>')
+    return "\n".join(rows), len(people)
 
 
 def write(path, text):
@@ -159,6 +244,12 @@ def main():
         for p in projects:
             if not p["description"]:
                 p["description"] = readme_summary(org, p["name"], token)
+            p["languages"] = safe_gh(f"/repos/{org}/{p['name']}/languages", token) or {}
+            p["contributors"] = [
+                {"login": c["login"], "avatar": c.get("avatar_url", ""), "url": c.get("html_url", ""),
+                 "commits": c.get("contributions", 0)}
+                for c in (safe_gh(f"/repos/{org}/{p['name']}/contributors?per_page=100", token) or [])
+                if c.get("type") != "Bot" and not c.get("login", "").endswith("[bot]")]
     projects.sort(key=lambda p: p["updated"], reverse=True)
 
     # ---- group by research area
@@ -214,6 +305,9 @@ def main():
         f'<td>{esc(p["description"])[:120]}</td><td class="lp-nowrap">{nice_date(p["updated"])}</td></tr>'
         for p in projects[:8])
     n_topics = len({t for p in projects for t in p["topics"]})
+    people_html, n_people = contributors_widget(projects)
+    lang_html = languages_widget(projects)
+    n_langs = len({l for p in projects for l in (p.get("languages") or {p.get("language"): 1}) if l})
 
     home = f"""---
 hide:
@@ -236,14 +330,31 @@ something new, and to locate the code behind a dataset, figure or publication.</
 <div class="lp-stats">
 <div><strong>{len(projects)}</strong><span>public repositories</span></div>
 <div><strong>{len(groups)}</strong><span>research areas</span></div>
-<div><strong>{n_topics}</strong><span>topics</span></div>
-<div><strong>Hourly</strong><span>automatic updates</span></div>
+<div><strong>{n_people}</strong><span>contributors</span></div>
+<div><strong>{n_langs}</strong><span>programming languages</span></div>
 </div>
 
 ## Research areas
 
 <div class="lp-areas">
 {chr(10).join(areas)}
+</div>
+
+## People and tools
+
+<div class="lp-two">
+<section class="lp-panel">
+<h3>Top contributors</h3>
+<p class="lp-panel-sub">The people who wrote most of the code. They are the best first contact for questions about a repository.</p>
+<div class="lp-people">
+{people_html}
+</div>
+</section>
+<section class="lp-panel">
+<h3>Programming languages</h3>
+<p class="lp-panel-sub">The languages our code is written in, and what each is typically used for.</p>
+{lang_html}
+</section>
 </div>
 
 ## Recently updated
@@ -254,6 +365,15 @@ something new, and to locate the code behind a dataset, figure or publication.</
 {recent}
 </tbody>
 </table>
+
+## New to GitHub?
+
+<div class="lp-guide">
+<div><h3>Repository</h3><p>A project folder on GitHub holding the code, and often example data and figures, for one analysis or tool. Each card in this catalogue is one repository.</p></div>
+<div><h3>README</h3><p>The instruction page shown on a repository's front page. It explains what the code does, what input it needs and how to run it. Start reading there.</p></div>
+<div><h3>Topic</h3><p>A keyword attached to a repository, such as <code>rna-seq</code> or <code>afm</code>. Topics place a repository under a research area and power the filters.</p></div>
+<div><h3>Who to ask</h3><p>On a repository page, the <strong>Contributors</strong> list on the right shows who wrote the code. Contact them before reusing or extending an analysis.</p></div>
+</div>
 
 ## Internal repositories
 
@@ -267,7 +387,8 @@ see [Access tokens](members-token.md).
     # ---- all repositories (interactive)
     write(DOCS / "assets" / "projects.json",
           json.dumps({"org": org, "categories": [c["name"] for c, _ in groups],
-                      "projects": projects}, indent=1))
+                      "projects": [{k: v for k, v in p.items() if k not in ("contributors", "languages")}
+                                   for p in projects]}, indent=1))
     write(DOCS / "all.md", """---
 hide:
   - navigation
