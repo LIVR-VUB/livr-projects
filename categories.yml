@@ -1,14 +1,18 @@
-# Research areas shown on the LIVR Project Catalogue.
+# Project types shown on the LIVR Project Catalogue (public pages and Members area).
 #
-#   A repository is listed under an area if it carries ANY of that area's topics.
-#   A repository can belong to several areas.
-#   Repositories matching no area are listed as "Unclassified".
+# A repository belongs to a project type if
+#   - it carries ANY of the type's `topics` (GitHub topics, exact match), or
+#   - its name or description contains ANY of the type's `keywords`
+#     (case-insensitive text match; keep keywords specific to avoid false matches).
+# A repository can belong to several types. Repositories matching none are "Unclassified".
 #
-# To classify a repository: on GitHub, open the repository, click the gear icon
-# next to "About" and add one of the topics below. The site updates hourly
-# (or immediately: Actions -> "Build project catalogue" -> Run workflow).
+# To classify a repository: on GitHub, open it, click the gear icon next to "About"
+# and add one of the topics below. The public pages update hourly; the Members area
+# is always live.
 #
-# Edit freely: rename areas, reorder them, add topics. `slug` is used in the URL.
+# Fields: name, slug (used in addresses), icon, colour, description, topics, keywords.
+# Available icons: single-cell, bulk, dna, protein, flask, layers, cell-painting,
+#   microscope, plate, network, server, book, report, tag
 
 org: LIVR-VUB
 
@@ -23,37 +27,98 @@ exclude:
   - livr-projects
 
 categories:
-  - name: Transcriptomics
-    slug: transcriptomics
-    description: Bulk and single-cell RNA sequencing, cell-type deconvolution and gene-expression analysis.
-    topics: [rna-seq, rnaseq, bulk-rna-seq, scrna-seq, scrnaseq, single-cell, transcriptomics, deconvolution]
+  - name: Single-cell RNA-seq
+    slug: single-cell-rna-seq
+    icon: single-cell
+    colour: "#7c3aed"
+    description: Single-cell and single-nucleus transcriptomics, including SPLiT-seq, clustering, annotation and cell atlases.
+    topics: [scrna-seq, scrnaseq, single-cell, snrna-seq, splitseq, split-seq, hsc-atlas, cell-atlas]
+    keywords: [scrna, single-cell, single cell, splitseq, split-seq]
+
+  - name: Bulk RNA-seq
+    slug: bulk-rna-seq
+    icon: bulk
+    colour: "#2563eb"
+    description: Bulk transcriptomics, including QuantSeq, differential expression, enrichment and deconvolution.
+    topics: [bulkrnaseq, bulk-rna-seq, rna-seq, rnaseq, quantseq, deconvolution, transcriptomics]
+    keywords: [bulk rna, bulkrna, quantseq, rna-seq, rnaseq]
+
+  - name: Proteomics
+    slug: proteomics
+    icon: protein
+    colour: "#db2777"
+    description: Mass-spectrometry proteomics and protein-level analyses.
+    topics: [proteomics, bulkproteomics, bulk-proteomics]
+    keywords: [proteomic]
 
   - name: Metabolomics and Lipidomics
     slug: metabolomics
-    description: Mass-spectrometry workflows for metabolite and lipid profiling.
+    icon: flask
+    colour: "#d97706"
+    description: Metabolite and lipid profiling by mass spectrometry.
     topics: [metabolomics, lipidomics, mass-spectrometry]
+    keywords: [metabolomic, lipidomic]
 
-  - name: Cell Painting and High-Content Screening
+  - name: Multi-omics
+    slug: multi-omics
+    icon: layers
+    colour: "#0d9488"
+    description: Integration of transcriptomic, proteomic, metabolomic and imaging data.
+    topics: [multiomics, multi-omics, bulk-omics, spatial-transcriptomics, spatial-omics]
+    keywords: [multiomic, multi-omic]
+
+  - name: Cell Painting
     slug: cell-painting
-    description: Cell Painting assays, CellProfiler pipelines, plate layouts and morphological profiling.
-    topics: [cell-painting, cellpainting, cellprofiler, cytomining, high-content-screening, hcs, platemap]
+    icon: cell-painting
+    colour: "#c026d3"
+    description: Cell Painting assays, CellProfiler and cytomining pipelines, and image-based morphological profiling.
+    topics: [cellpainting, cell-painting, cellprofiler, cytomining, image-based-profiling, high-content-screening, high-throughput, hcs]
+    keywords: [cell painting, cellpainting, cytomining, cellprofiler, _cp_]
 
-  - name: Imaging and Image Analysis
+  - name: Microscopy and Image Analysis
     slug: image-analysis
-    description: Quantitative microscopy, including AFM, fenestration analysis, organoids and segmentation.
-    topics: [image-analysis, microscopy, afm, fenestrae, organoids, segmentation, bodipy]
+    icon: microscope
+    colour: "#0891b2"
+    description: Quantitative microscopy and image processing, including segmentation, AFM and lipid-droplet analysis.
+    topics: [image-analysis, image-processing, microscopy, cellpose, cell-analysis, segmentation, afm, fenestrae, organoids, bodipy]
+    keywords: [cellpose, segmentation, bodipy, afm, fenestra, organoid, microscop]
 
-  - name: Spatial and Multi-omics
-    slug: multiomics
-    description: Spatial transcriptomics, proteomics and integration across molecular layers.
-    topics: [spatial-transcriptomics, spatial-omics, multiomics, multi-omics, proteomics]
+  - name: Plate Design and Lab Tools
+    slug: lab-tools
+    icon: plate
+    colour: "#16a34a"
+    description: Plate layouts, well maps and small utilities that support experiments at the bench.
+    topics: [platemap, plate-tools, 96well, 384well, lab-tools]
+    keywords: [platemap, plate map, plate-map]
 
   - name: Machine Learning
     slug: machine-learning
-    description: Statistical learning and deep-learning models applied to the group's data.
-    topics: [machine-learning, deep-learning, ai]
+    icon: network
+    colour: "#4f46e5"
+    description: Machine-learning and deep-learning models applied to the group's data.
+    topics: [machine-learning, deep-learning, ai, ml]
+    keywords: [machine learning, deep learning, -ml, _ml]
 
-  - name: Computing Infrastructure
-    slug: infrastructure
-    description: High-performance computing on VSC, software containers, instrument control and shared utilities.
-    topics: [hpc, vsc, containers, singularity, apptainer, docker, bioreactor, infrastructure]
+  - name: Computing and Containers
+    slug: computing
+    icon: server
+    colour: "#475569"
+    description: Running analyses on the VSC/HPC cluster, Singularity and Docker containers, and workflow tooling.
+    topics: [hpc, hpc-containers, singularity-container, singularity, apptainer, docker, containers, vsc, hydra]
+    keywords: [hpc, singularity, apptainer, container]
+
+  - name: Lab Resources and Onboarding
+    slug: resources
+    icon: book
+    colour: "#ea580c"
+    description: Foundational repositories, shared tools, templates and onboarding material for new members.
+    topics: [livr-onboarding, foundational-repository, tools, basic-tools, general, template, livr]
+    keywords: [onboarding, template]
+
+  - name: Reports and Publications
+    slug: reports
+    icon: report
+    colour: "#0f766e"
+    description: Final analysis versions and code accompanying manuscripts and reports.
+    topics: [jhep-reports, final-version, publication, manuscript, paper]
+    keywords: [manuscript, publication]

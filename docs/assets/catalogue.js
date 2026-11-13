@@ -1,60 +1,93 @@
-// LIVR project catalogue: interactive filter ("All projects") and the
-// token-gated "LIVR members" section.
+// LIVR Project Catalogue: interactive repository index and the token-protected Members area.
 //
-// Members section security model:
+// Members area security model:
 //   * The website itself never contains private data.
-//   * A member pastes their own GitHub token; the browser talks directly to
+//   * A member enters their own GitHub token; the browser talks directly to
 //     api.github.com with it. The token is never sent anywhere else.
-//   * The token is kept in sessionStorage (forgotten when the tab closes)
-//     unless the member ticks "remember on this device" (localStorage).
+//   * The token is kept in sessionStorage (discarded when the tab closes) unless
+//     the member chooses "Keep me signed in" (localStorage).
 (function () {
   const scriptSrc = (document.currentScript || {}).src || "";
   const assetUrl = f => scriptSrc.replace(/catalogue\.js.*$/, f);
   const TOKEN_KEY = "livr_gh_token";
   const API = "https://api.github.com";
+  const UNCLASSIFIED = "Unclassified";
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   // ------------------------------------------------------------- helpers
   function el(tag, attrs, ...kids) {
     const n = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
       if (k === "class") n.className = v;
+      else if (k === "style") n.setAttribute("style", v);
+      else if (k === "html") n.innerHTML = v;
       else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
       else if (v !== false && v != null) n.setAttribute(k, v === true ? "" : v);
     }
     kids.flat().forEach(k => k != null && k !== false && n.append(k));
     return n;
   }
+  const niceDate = iso => { const [y, m, d] = (iso || "").split("-"); return y && m && d ? `${+d} ${MONTHS[+m - 1]} ${y}` : iso; };
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const iconBox = (style, cls = "lp-icon") => el("span", { class: cls, style: `--c:${style.colour}`, html: style.icon });
 
-  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const niceDate = iso => { const [y, m, d] = iso.split("-"); return y && m && d ? `${+d} ${MONTHS[+m - 1]} ${y}` : iso; };
+  // Classify a project: topics (exact) or keywords (in name/description).
+  function classify(projects, cfg) {
+    for (const p of projects) {
+      const own = new Set(p.topics.map(t => t.toLowerCase()));
+      const text = (p.name + " " + (p.description || "")).toLowerCase();
+      p.categories = cfg.categories.filter(c =>
+        (c.topics || []).some(t => own.has(t.toLowerCase())) ||
+        (c.keywords || []).some(k => text.includes(k.toLowerCase()))).map(c => c.name);
+    }
+  }
+  function styleOf(p, cfg) {
+    const c = cfg.categories.find(c => c.name === (p.categories || [])[0]);
+    return c ? { icon: c.icon, colour: c.colour } : cfg.unclassified;
+  }
 
-  // ----------------------------------------------- shared filter renderer
-  function renderCatalogue(root, data, opts = {}) {
-    const params = new URLSearchParams(location.search);
+  function projectCard(p, cfg, state, update) {
+    return el("article", { class: "cat-card" },
+      el("div", { class: "lp-card-top" },
+        iconBox(styleOf(p, cfg), "lp-icon lp-icon-sm"),
+        el("h3", {}, el("a", { href: p.url, target: "_blank", rel: "noopener" }, p.name),
+          p.private ? el("span", { class: "cat-private", title: "Private repository" }, "Private") : null)),
+      el("p", {}, p.description || el("span", { class: "lp-muted" }, "No description provided.")),
+      el("div", { class: "cat-tags" }, p.topics.map(t => el("button", {
+        class: "cat-tag" + (state && state.tags.has(t) ? " is-active" : ""),
+        onclick: () => { if (!state) return; state.tags.has(t) ? state.tags.delete(t) : state.tags.add(t); update(); }
+      }, t))),
+      el("div", { class: "cat-meta" }, [p.language, p.updated && "Updated " + niceDate(p.updated),
+        (p.categories || []).join(", ")].filter(Boolean).join(" · ")));
+  }
+
+  // ------------------------------------------- filterable list of projects
+  // opts: { header, hideTypes, readUrl, placeholder }
+  function renderCatalogue(root, projects, cfg, opts = {}) {
+    const params = opts.readUrl ? new URLSearchParams(location.search) : new URLSearchParams();
     const state = { q: "", type: params.get("type") || "", tags: new Set(params.getAll("tag")) };
-    const UNTAGGED = "Unclassified";
+    const typeNames = [...cfg.categories.map(c => c.name), UNCLASSIFIED];
 
-    const search = el("input", { class: "cat-search md-input", type: "search", placeholder: "Search by name, description or topic" });
+    const search = el("input", { class: "cat-search", type: "search", placeholder: opts.placeholder || "Search by name, description or topic" });
     const types = el("div", { class: "cat-chips" });
     const tags = el("div", { class: "cat-chips" });
     const count = el("p", { class: "cat-count" });
     const list = el("div", { class: "cat-list" });
-    root.replaceChildren(...(opts.header ? [opts.header] : []), search,
-      el("div", { class: "cat-label" }, "Research area"), types,
-      el("div", { class: "cat-label" }, "Topic"), tags, count, list);
+    root.replaceChildren(...[opts.header, search,
+      opts.hideTypes ? null : el("div", { class: "cat-label" }, "Project type"), opts.hideTypes ? null : types,
+      el("div", { class: "cat-label" }, "Topic"), tags, count, list].filter(Boolean));
     search.addEventListener("input", () => { state.q = search.value.toLowerCase(); update(); });
 
     const chip = (label, active, onclick, n) =>
       el("button", { class: "cat-chip" + (active ? " is-active" : ""), onclick },
         label, n != null ? el("span", { class: "cat-n" }, String(n)) : null);
-    const inType = (p, t) => t === UNTAGGED ? !(p.categories || []).length : (p.categories || []).includes(t);
-    const toggleTag = t => { state.tags.has(t) ? state.tags.delete(t) : state.tags.add(t); update(); };
+    const inType = (p, t) => t === UNCLASSIFIED ? !(p.categories || []).length : (p.categories || []).includes(t);
 
     function matches(p) {
       if (state.type && !inType(p, state.type)) return false;
       for (const t of state.tags) if (!p.topics.includes(t)) return false;
       if (state.q) {
-        const hay = [p.name, p.description, p.topics.join(" "), p.language].join(" ").toLowerCase();
+        const hay = [p.name, p.description, p.topics.join(" "), p.language, (p.categories || []).join(" ")].join(" ").toLowerCase();
         if (!state.q.split(/\s+/).every(w => hay.includes(w))) return false;
       }
       return true;
@@ -62,28 +95,19 @@
 
     function update() {
       const tagCounts = {};
-      data.projects.forEach(p => p.topics.forEach(t => tagCounts[t] = (tagCounts[t] || 0) + 1));
+      projects.forEach(p => p.topics.forEach(t => tagCounts[t] = (tagCounts[t] || 0) + 1));
       const tagList = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b));
-      const typeNames = [...data.categories, UNTAGGED];
-
-      types.replaceChildren(chip("All", !state.type, () => { state.type = ""; update(); }, data.projects.length),
-        ...typeNames.map(t => chip(t, state.type === t,
-          () => { state.type = state.type === t ? "" : t; update(); },
-          data.projects.filter(p => inType(p, t)).length)));
-      tags.replaceChildren(...tagList.map(t => chip(t, state.tags.has(t), () => toggleTag(t), tagCounts[t])));
-
-      const shown = data.projects.filter(matches);
-      count.textContent = shown.length === data.projects.length ? `${shown.length} repositories` : `Showing ${shown.length} of ${data.projects.length} repositories`;
-      list.replaceChildren(...shown.map(p => el("article", { class: "cat-card" },
-        el("h3", {}, el("a", { href: p.url, target: "_blank", rel: "noopener" }, p.name),
-          p.private ? el("span", { class: "cat-private", title: "Private repository" }, "Private") : null),
-        el("p", {}, p.description || el("span", { class: "lp-muted" }, "No description provided.")),
-        el("div", { class: "cat-tags" }, p.topics.map(t => el("button", {
-          class: "cat-tag" + (state.tags.has(t) ? " is-active" : ""), onclick: () => toggleTag(t)
-        }, t))),
-        el("div", { class: "cat-meta" }, [p.language, p.updated && "Updated " + niceDate(p.updated),
-          (p.categories || []).join(", ")].filter(Boolean).join(" · "))
-      )));
+      if (!opts.hideTypes)
+        types.replaceChildren(chip("All", !state.type, () => { state.type = ""; update(); }, projects.length),
+          ...typeNames.map(t => [t, projects.filter(p => inType(p, t)).length]).filter(([, n]) => n)
+            .map(([t, n]) => chip(t, state.type === t, () => { state.type = state.type === t ? "" : t; update(); }, n)));
+      tags.replaceChildren(...tagList.map(t => chip(t, state.tags.has(t), () => {
+        state.tags.has(t) ? state.tags.delete(t) : state.tags.add(t); update();
+      }, tagCounts[t])));
+      const shown = projects.filter(matches);
+      count.textContent = shown.length === projects.length ? plural(shown.length, "repository", "repositories")
+        : `Showing ${shown.length} of ${projects.length} repositories`;
+      list.replaceChildren(...shown.map(p => projectCard(p, cfg, state, update)));
       if (!shown.length) list.append(el("p", { class: "lp-empty" }, "No repositories match the current filters."));
     }
     update();
@@ -92,12 +116,14 @@
 
   async function renderPublic(root) {
     try {
-      const data = await (await fetch(assetUrl("projects.json"))).json();
-      renderCatalogue(root, data);
-    } catch (e) { root.textContent = "Could not load the project list."; }
+      const [data, cfg] = await Promise.all([
+        fetch(assetUrl("projects.json")).then(r => r.json()),
+        fetch(assetUrl("categories.json")).then(r => r.json())]);
+      renderCatalogue(root, data.projects, cfg, { readUrl: true });
+    } catch (e) { root.textContent = "The repository list could not be loaded."; }
   }
 
-  // ------------------------------------------------------ members section
+  // ------------------------------------------------------ members area
   const getToken = () => sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
   const clearToken = () => { sessionStorage.removeItem(TOKEN_KEY); localStorage.removeItem(TOKEN_KEY); };
 
@@ -123,9 +149,9 @@
   }
 
   function loginForm(root, cfg, message) {
-    const input = el("input", { class: "cat-search md-input", type: "password", placeholder: "Personal access token (github_pat_…)", autocomplete: "off" });
+    const input = el("input", { class: "cat-search", type: "password", placeholder: "Personal access token (github_pat_…)", autocomplete: "off" });
     const remember = el("input", { type: "checkbox", id: "livr-remember" });
-    const go = async ev => {
+    const go = ev => {
       ev.preventDefault();
       const t = input.value.trim();
       if (!t) return;
@@ -179,23 +205,16 @@
         updated: (r.pushed_at || "").slice(0, 10), private: !!r.private,
       }))
       .sort((a, b) => b.updated.localeCompare(a.updated));
-    for (const p of projects) {
-      const own = new Set(p.topics.map(t => t.toLowerCase()));
-      p.categories = cfg.categories.filter(c => c.topics.some(t => own.has(t.toLowerCase()))).map(c => c.name);
-    }
-    const nPrivate = projects.filter(p => p.private).length;
+    classify(projects, cfg);
 
-    const signOut = el("button", { class: "md-button", onclick: () => { clearToken(); loginForm(root, cfg); } }, "Sign out");
-    const header = el("div", { class: "livr-bar" },
-      el("span", {}, "Signed in as ", el("strong", {}, user.login), ` · ${projects.length} repositories, of which ${nPrivate} private`),
-      signOut);
-    if (!nPrivate) header.append(el("div", { class: "livr-note" },
-      "No private repositories are visible with this token. It may lack access to LIVR-VUB or still await approval. See ",
-      el("a", { href: assetUrl("../members-token/") }, "Access tokens"), "."));
+    const app = { root, cfg, user, projects };
+    const route = () => renderRoute(app);
+    if (window.__livrRoute) window.removeEventListener("hashchange", window.__livrRoute);
+    window.__livrRoute = route;
+    window.addEventListener("hashchange", route);
+    route();
 
-    const update = renderCatalogue(root, { categories: cfg.categories.map(c => c.name), projects }, { header });
-
-    // Fill empty descriptions from README first paragraphs, a few at a time.
+    // Fill missing descriptions from README first paragraphs, then refresh the view.
     const todo = projects.filter(p => !p.description);
     const worker = async () => {
       while (todo.length) {
@@ -203,15 +222,101 @@
         try { p.description = summarise(await gh(`/repos/${cfg.org}/${p.name}/readme`, token, true)); } catch (e) {}
       }
     };
-    await Promise.all(Array.from({ length: 6 }, worker));
-    update();
+    if (todo.length) {
+      await Promise.all(Array.from({ length: 6 }, worker));
+      classify(projects, cfg);
+      // refresh only if the member is not typing in a search box
+      if (!(document.activeElement && document.activeElement.classList.contains("cat-search") && document.activeElement.value)) route();
+    }
+  }
+
+  function signedInBar(app) {
+    const nPrivate = app.projects.filter(p => p.private).length;
+    const bar = el("div", { class: "livr-bar" },
+      el("span", {}, "Signed in as ", el("strong", {}, app.user.login),
+        ` · ${plural(app.projects.length, "repository", "repositories")}, of which ${nPrivate} private`),
+      el("button", { class: "md-button", onclick: () => { clearToken(); history.replaceState(null, "", location.pathname); loginForm(app.root, app.cfg); } }, "Sign out"));
+    if (!nPrivate) bar.append(el("div", { class: "livr-note" },
+      "No private repositories are visible with this token. It may lack access to LIVR-VUB or still await approval. See ",
+      el("a", { href: assetUrl("../members-token/") }, "Access tokens"), "."));
+    return bar;
+  }
+
+  function renderRoute(app) {
+    if (!getToken()) return loginForm(app.root, app.cfg);
+    const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const slug = h.get("type");
+    if (!slug) return renderMembersHome(app);
+    window.scrollTo(0, 0);
+    if (slug === "all") return renderTypeView(app, { name: "All repositories",
+      description: "Every repository you have access to in the LIVR-VUB organisation.", ...app.cfg.all }, app.projects, true);
+    if (slug === "unclassified") return renderTypeView(app, { name: UNCLASSIFIED,
+      description: "Repositories without a topic or keyword that maps to a project type. Adding a topic on GitHub will classify them.",
+      ...app.cfg.unclassified }, app.projects.filter(p => !(p.categories || []).length));
+    const c = app.cfg.categories.find(c => c.slug === slug);
+    if (!c) { location.hash = ""; return; }
+    renderTypeView(app, c, app.projects.filter(p => (p.categories || []).includes(c.name)));
+  }
+
+  function typeTile(style, name, description, n, href) {
+    return el("a", { class: "lp-type-tile" + (n ? "" : " is-empty"), href, style: `--c:${style.colour}` },
+      iconBox(style, "lp-icon lp-icon-lg"),
+      el("span", { class: "lp-type-text" },
+        el("span", { class: "lp-type-name" }, name),
+        el("span", { class: "lp-type-desc" }, description),
+        el("span", { class: "lp-type-count" }, plural(n, "repository", "repositories"))));
+  }
+
+  function renderMembersHome(app) {
+    const { cfg, projects } = app;
+    const firstName = app.user.name ? app.user.name.split(" ")[0] : app.user.login;
+    const count = c => projects.filter(p => (p.categories || []).includes(c.name)).length;
+    const ordered = cfg.categories.slice().sort((a, b) => (count(b) > 0) - (count(a) > 0));  // empty types last
+    const search = el("input", { class: "cat-search lp-home-search", type: "search", placeholder: "Search all repositories by name, description or topic" });
+    const nUn = projects.filter(p => !(p.categories || []).length).length;
+    const results = el("div", {});
+    const browse = el("div", {},
+      el("h3", { class: "lp-section" }, "Project types"),
+      el("div", { class: "lp-type-grid" }, ordered.map(c => typeTile(c, c.name, c.description, count(c), "#type=" + c.slug))),
+      el("h3", { class: "lp-section" }, "Other views"),
+      el("div", { class: "lp-type-grid" },
+        typeTile(cfg.all, "All repositories", "The complete list, with search and filters by type and topic.", projects.length, "#type=all"),
+        nUn ? typeTile(cfg.unclassified, UNCLASSIFIED, "Repositories that still need a topic to be assigned to a type.", nUn, "#type=unclassified") : null));
+
+    search.addEventListener("input", () => {
+      const q = search.value.trim().toLowerCase();
+      if (!q) { results.replaceChildren(); browse.hidden = false; return; }
+      browse.hidden = true;
+      const hits = projects.filter(p => q.split(/\s+/).every(w =>
+        [p.name, p.description, p.topics.join(" "), (p.categories || []).join(" ")].join(" ").toLowerCase().includes(w)));
+      results.replaceChildren(el("p", { class: "cat-count" }, plural(hits.length, "result", "results")),
+        el("div", { class: "cat-list" }, hits.map(p => projectCard(p, cfg))));
+    });
+
+    app.root.replaceChildren(signedInBar(app),
+      el("div", { class: "lp-welcome" },
+        el("h2", {}, `Welcome, ${firstName}`),
+        el("p", {}, "Select a project type to see its repositories, or search across everything you have access to.")),
+      search, results, browse);
+  }
+
+  function renderTypeView(app, style, list, showTypes) {
+    const crumbs = el("nav", { class: "lp-crumbs" },
+      el("a", { href: "#" }, "Project types"), el("span", { class: "lp-crumb-sep" }, "/"), el("span", {}, style.name));
+    const head = el("div", { class: "lp-type-hero", style: `--c:${style.colour}` },
+      iconBox(style, "lp-icon lp-icon-xl"),
+      el("div", {}, el("h2", {}, style.name), el("p", {}, style.description || ""),
+        el("span", { class: "lp-type-count" }, plural(list.length, "repository", "repositories"))));
+    const body = el("div", {});
+    app.root.replaceChildren(signedInBar(app), crumbs, head, body);
+    renderCatalogue(body, list, app.cfg, { hideTypes: !showTypes, placeholder: `Search within ${style.name}` });
   }
 
   async function renderMembers(root) {
     try {
       const cfg = await (await fetch(assetUrl("categories.json"))).json();
       loadMembers(root, cfg);
-    } catch (e) { root.textContent = "Could not load the site configuration."; }
+    } catch (e) { root.textContent = "The site configuration could not be loaded."; }
   }
 
   // ----------------------------------------------------------------- init

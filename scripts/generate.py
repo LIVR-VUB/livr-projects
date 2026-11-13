@@ -22,6 +22,8 @@ from pathlib import Path
 
 import yaml
 
+from icons import svg as icon_svg
+
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 API = "https://api.github.com"
@@ -98,15 +100,25 @@ def nice_date(iso):
         return iso
 
 
+def icon_box(name, colour, size=22, cls="lp-icon"):
+    return (f'<span class="{cls}" style="--c:{colour}">{icon_svg(name, size)}</span>')
+
+
+CAT_STYLE = {}          # category name -> (icon, colour); filled in main()
+UNCLASSIFIED = ("tag", "#6b7280")
+
+
 def card(p, base):
     """HTML project card. `base` is the relative path to the site root."""
+    ic, col = CAT_STYLE.get((p.get("categories") or [None])[0], UNCLASSIFIED)
     badge = '<span class="lp-badge">Private</span>' if p["private"] else ""
     desc = esc(p["description"]) or '<span class="lp-muted">No description provided.</span>'
     tags = "".join(f'<a class="lp-tag" href="{base}all/?tag={esc(t)}">{esc(t)}</a>' for t in p["topics"])
     meta = " · ".join(x for x in [esc(p["language"]),
                                   f"Updated {nice_date(p['updated'])}" if p["updated"] else ""] if x)
     return (f'<article class="lp-card">'
-            f'<h3><a href="{esc(p["url"])}">{esc(p["name"])}</a>{badge}</h3>'
+            f'<div class="lp-card-top">{icon_box(ic, col, 18, "lp-icon lp-icon-sm")}'
+            f'<h3><a href="{esc(p["url"])}">{esc(p["name"])}</a>{badge}</h3></div>'
             f'<p>{desc}</p>'
             f'<div class="lp-tags">{tags}</div>'
             f'<div class="lp-meta">{meta}</div>'
@@ -255,8 +267,14 @@ def main():
     # ---- group by research area
     groups, placed = [], set()
     for c in cfg["categories"]:
-        want = {t.lower() for t in c["topics"]}
-        members = [p for p in projects if want & {t.lower() for t in p["topics"]}]
+        CAT_STYLE[c["name"]] = (c.get("icon", "tag"), c.get("colour", "#003895"))
+    def belongs(p, c):
+        if {t.lower() for t in c.get("topics", [])} & {t.lower() for t in p["topics"]}:
+            return True
+        text = (p["name"] + " " + (p["description"] or "")).lower()
+        return any(k.lower() in text for k in c.get("keywords", []))
+    for c in cfg["categories"]:
+        members = [p for p in projects if belongs(p, c)]
         for p in members:
             p.setdefault("categories", []).append(c["name"])
             placed.add(p["name"])
@@ -265,7 +283,8 @@ def main():
 
     # ---- one page per research area
     for c, members in groups:
-        body = [f"# {c['name']}\n",
+        body = [f'<div class="lp-type-head">{icon_box(c.get("icon", "tag"), c.get("colour", "#003895"), 28, "lp-icon lp-icon-lg")}'
+                f'<h1>{esc(c["name"])}</h1></div>\n',
                 f'<p class="lp-lead">{esc(c.get("description", ""))}</p>\n',
                 f'<p class="lp-sub">{len(members)} {"repository" if len(members) == 1 else "repositories"}'
                 f' · Topics: ' + ", ".join(f"<code>{esc(t)}</code>" for t in c["topics"]) + "</p>\n"]
@@ -278,7 +297,7 @@ def main():
 
     # ---- unclassified
     body = ["# Unclassified repositories\n",
-            '<p class="lp-lead">These repositories do not yet carry a topic that maps to a research area. '
+            '<p class="lp-lead">These repositories do not yet carry a topic that maps to a project type. '
             'Add a topic on GitHub and they will be classified at the next update. '
             'See <a href="../how-to-add/">Contributing</a>.</p>\n']
     body.append(grid(card(p, "../") for p in untagged) if untagged
@@ -292,13 +311,15 @@ def main():
     areas = []
     for c, members in groups:
         areas.append(f'<a class="lp-area" href="{c["slug"]}/">'
+                     f'{icon_box(c.get("icon", "tag"), c.get("colour", "#003895"))}'
                      f'<span class="lp-area-name">{esc(c["name"])}</span>'
                      f'<span class="lp-area-desc">{esc(c.get("description", ""))}</span>'
                      f'<span class="lp-area-count">{repos(len(members))}</span></a>')
     if untagged:
         areas.append(f'<a class="lp-area lp-area-muted" href="untagged/">'
+                     f'{icon_box(*UNCLASSIFIED)}'
                      f'<span class="lp-area-name">Unclassified</span>'
-                     f'<span class="lp-area-desc">Repositories without a research-area topic.</span>'
+                     f'<span class="lp-area-desc">Repositories without a project-type topic.</span>'
                      f'<span class="lp-area-count">{repos(len(untagged))}</span></a>')
     recent = "\n".join(
         f'<tr><td><a href="{esc(p["url"])}">{esc(p["name"])}</a></td>'
@@ -319,7 +340,7 @@ hide:
 <p class="lp-eyebrow">Liver Cell Biology Research Group · Vrije Universiteit Brussel</p>
 <h1>Project Catalogue</h1>
 <p class="lp-hero-text">A single index of the group's analysis pipelines, research software and
-computational resources, organised by research area. Use it to find existing work before starting
+computational resources, organised by project type. Use it to find existing work before starting
 something new, and to locate the code behind a dataset, figure or publication.</p>
 <div class="lp-actions">
 <a class="lp-btn lp-btn-primary" href="all/">Browse all repositories</a>
@@ -329,12 +350,12 @@ something new, and to locate the code behind a dataset, figure or publication.</
 
 <div class="lp-stats">
 <div><strong>{len(projects)}</strong><span>public repositories</span></div>
-<div><strong>{len(groups)}</strong><span>research areas</span></div>
+<div><strong>{len(groups)}</strong><span>project types</span></div>
 <div><strong>{n_people}</strong><span>contributors</span></div>
 <div><strong>{n_langs}</strong><span>programming languages</span></div>
 </div>
 
-## Research areas
+## Project types
 
 <div class="lp-areas">
 {chr(10).join(areas)}
@@ -371,7 +392,7 @@ something new, and to locate the code behind a dataset, figure or publication.</
 <div class="lp-guide">
 <div><h3>Repository</h3><p>A project folder on GitHub holding the code, and often example data and figures, for one analysis or tool. Each card in this catalogue is one repository.</p></div>
 <div><h3>README</h3><p>The instruction page shown on a repository's front page. It explains what the code does, what input it needs and how to run it. Start reading there.</p></div>
-<div><h3>Topic</h3><p>A keyword attached to a repository, such as <code>rna-seq</code> or <code>afm</code>. Topics place a repository under a research area and power the filters.</p></div>
+<div><h3>Topic</h3><p>A keyword attached to a repository, such as <code>rna-seq</code> or <code>afm</code>. Topics place a repository under a project type and power the filters.</p></div>
 <div><h3>Who to ask</h3><p>On a repository page, the <strong>Contributors</strong> list on the right shows who wrote the code. Contact them before reusing or extending an analysis.</p></div>
 </div>
 
@@ -398,7 +419,7 @@ hide:
 # Repository index
 
 <p class="lp-lead">All public repositories of the group. Search by name, description or topic,
-or narrow the list by research area and topic.</p>
+or narrow the list by project type and topic.</p>
 
 <div id="catalogue">Loading…</div>
 """ + SELF_HEAL.replace("ID", "catalogue"))
@@ -406,7 +427,12 @@ or narrow the list by research area and topic.</p>
     # ---- members area (data fetched in the browser with the member's token)
     write(DOCS / "assets" / "categories.json", json.dumps({
         "org": org, "exclude": sorted(excluded),
-        "categories": [{"name": c["name"], "slug": c["slug"], "topics": c["topics"]} for c in cfg["categories"]],
+        "categories": [{"name": c["name"], "slug": c["slug"], "description": c.get("description", ""),
+                        "colour": c.get("colour", "#003895"), "icon": icon_svg(c.get("icon", "tag"), 24),
+                        "topics": c.get("topics", []), "keywords": c.get("keywords", [])}
+                       for c in cfg["categories"]],
+        "unclassified": {"colour": UNCLASSIFIED[1], "icon": icon_svg(UNCLASSIFIED[0], 24)},
+        "all": {"colour": "#003895", "icon": icon_svg("grid", 24)},
     }, indent=1))
     write(DOCS / "members.md", """---
 hide:
@@ -424,7 +450,7 @@ search:
 """ + SELF_HEAL.replace("ID", "members"))
 
     # ---- mkdocs.yml = base + nav (+ cache-busting for our own assets)
-    nav = ["nav:", "  - Overview: index.md", "  - Repository index: all.md", "  - Research areas:"]
+    nav = ["nav:", "  - Overview: index.md", "  - Repository index: all.md", "  - Project types:"]
     nav += [f"      - {c['name']}: {c['slug']}.md" for c, _ in groups]
     nav += ["      - Unclassified: untagged.md",
             "  - Contributing: how-to-add.md",
