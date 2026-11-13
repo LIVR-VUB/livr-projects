@@ -1,0 +1,51 @@
+site_name: LIVR project catalogue
+site_description: All code projects of the Liver Cell Biology Research Group (VUB), grouped by type
+site_url: https://livr-vub.github.io/livr-projects/
+repo_url: https://github.com/LIVR-VUB
+repo_name: LIVR-VUB on GitHub
+edit_uri: ""
+
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/bookshelf
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: deep orange
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: deep orange
+      toggle: { icon: material/weather-sunny, name: Light mode }
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - search.suggest
+    - search.highlight
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - pymdownx.keys
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra_css:
+  - assets/catalogue.css
+extra_javascript:
+  - assets/catalogue.js

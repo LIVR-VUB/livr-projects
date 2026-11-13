@@ -1,0 +1,67 @@
+# Groups shown on the LIVR project catalogue website.
+#
+#   A repo goes into a group if it has ANY of that group's topics (tags).
+#   A repo can be in more than one group.
+#   Repos matching no group land on the "Not yet tagged" page.
+#
+# To put a project in a group: open the repo on GitHub -> gear icon next to
+# "About" -> add one of the topics below. The site rebuilds every hour
+# (or right away: Actions -> "Build project catalogue" -> Run workflow).
+#
+# Edit freely: rename groups, reorder, add topics, change icons.
+# Icons: any Material icon name, see https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/
+
+org: LIVR-VUB
+
+# Which repos to list: public | private | all
+# NOTE: the website itself is public on a free GitHub plan. "all" would show
+# names and descriptions of private repos to anyone with the link.
+visibility: public
+
+exclude:
+  - .github
+  - .github-private
+  - livr-projects
+
+categories:
+  - name: RNA-seq & Transcriptomics
+    slug: rna-seq
+    icon: material/dna
+    description: Bulk and single-cell RNA-seq, deconvolution, transcriptomic analyses.
+    topics: [rna-seq, rnaseq, bulk-rna-seq, scrna-seq, scrnaseq, single-cell, transcriptomics, deconvolution]
+
+  - name: Metabolomics & Lipidomics
+    slug: metabolomics
+    icon: material/flask-outline
+    description: Mass-spec based metabolomics and lipidomics workflows.
+    topics: [metabolomics, lipidomics, mass-spectrometry]
+
+  - name: Cell Painting & High-Content Screening
+    slug: cell-painting
+    icon: material/palette
+    description: Cell Painting assays, CellProfiler pipelines, plate maps, profiling.
+    topics: [cell-painting, cellpainting, cellprofiler, cytomining, high-content-screening, hcs, platemap]
+
+  - name: Microscopy & Image Analysis
+    slug: image-analysis
+    icon: material/microscope
+    description: AFM, fenestrae, organoids, segmentation and other image quantification.
+    topics: [image-analysis, microscopy, afm, fenestrae, organoids, segmentation, bodipy]
+
+  - name: Spatial & Multi-omics
+    slug: multiomics
+    icon: material/layers-triple
+    description: Spatial transcriptomics, proteomics and integrated multi-omics.
+    topics: [spatial-transcriptomics, spatial-omics, multiomics, multi-omics, proteomics]
+
+  - name: Machine Learning & AI
+    slug: machine-learning
+    icon: material/robot-outline
+    description: Deep learning models and ML tools.
+    topics: [machine-learning, deep-learning, ai]
+
+  - name: HPC, Containers & Infrastructure
+    slug: infrastructure
+    icon: material/server
+    description: Running on VSC/HPC, containers, lab hardware and utilities.
+    topics: [hpc, vsc, containers, singularity, apptainer, docker, bioreactor, infrastructure]

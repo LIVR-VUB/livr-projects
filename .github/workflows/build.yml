@@ -1,0 +1,76 @@
+name: Build project catalogue
+
+on:
+  schedule:
+    - cron: "7 * * * *"      # every hour: new repos / tags / descriptions show up automatically
+  workflow_dispatch:          # "Run workflow" button for an instant update
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install "mkdocs<2" "mkdocs-material>=9.7,<10" pyyaml
+
+      # The built-in token can read all PUBLIC repos of the org.
+      # To include private repos, create a fine-grained token with read access
+      # to the org's repos, save it as the secret ORG_READ_TOKEN, and set
+      # `visibility` in categories.yml (see the warning there).
+      - name: Generate pages from repo topics
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORG_READ_TOKEN || secrets.GITHUB_TOKEN }}
+        run: python scripts/generate.py
+
+      - run: mkdocs build --strict
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # GitHub pauses scheduled workflows in public repos after 60 days without
+  # commits. This job makes an empty commit when the repo has been quiet for
+  # 50 days, so the hourly rebuild never stops.
+  keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Keep the schedule alive
+        run: |
+          last=$(git log -1 --format=%ct)
+          age_days=$(( ( $(date +%s) - last ) / 86400 ))
+          echo "Last commit was $age_days days ago"
+          if [ "$age_days" -ge 50 ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "Keep scheduled rebuild active"
+            git push
+          fi
