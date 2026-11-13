@@ -1,21 +1,20 @@
-# Groups shown on the LIVR project catalogue website.
+# Research areas shown on the LIVR Project Catalogue.
 #
-#   A repo goes into a group if it has ANY of that group's topics (tags).
-#   A repo can be in more than one group.
-#   Repos matching no group land on the "Not yet tagged" page.
+#   A repository is listed under an area if it carries ANY of that area's topics.
+#   A repository can belong to several areas.
+#   Repositories matching no area are listed as "Unclassified".
 #
-# To put a project in a group: open the repo on GitHub -> gear icon next to
-# "About" -> add one of the topics below. The site rebuilds every hour
-# (or right away: Actions -> "Build project catalogue" -> Run workflow).
+# To classify a repository: on GitHub, open the repository, click the gear icon
+# next to "About" and add one of the topics below. The site updates hourly
+# (or immediately: Actions -> "Build project catalogue" -> Run workflow).
 #
-# Edit freely: rename groups, reorder, add topics, change icons.
-# Icons: any Material icon name, see https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/
+# Edit freely: rename areas, reorder them, add topics. `slug` is used in the URL.
 
 org: LIVR-VUB
 
-# Which repos to list: public | private | all
-# NOTE: the website itself is public on a free GitHub plan. "all" would show
-# names and descriptions of private repos to anyone with the link.
+# Which repositories the PUBLIC pages list: public | private | all
+# The website is publicly accessible. Keep this on "public"; private repositories
+# are shown only in the token-protected Members area.
 visibility: public
 
 exclude:
@@ -24,44 +23,37 @@ exclude:
   - livr-projects
 
 categories:
-  - name: RNA-seq & Transcriptomics
-    slug: rna-seq
-    icon: material/dna
-    description: Bulk and single-cell RNA-seq, deconvolution, transcriptomic analyses.
+  - name: Transcriptomics
+    slug: transcriptomics
+    description: Bulk and single-cell RNA sequencing, cell-type deconvolution and gene-expression analysis.
     topics: [rna-seq, rnaseq, bulk-rna-seq, scrna-seq, scrnaseq, single-cell, transcriptomics, deconvolution]
 
-  - name: Metabolomics & Lipidomics
+  - name: Metabolomics and Lipidomics
     slug: metabolomics
-    icon: material/flask-outline
-    description: Mass-spec based metabolomics and lipidomics workflows.
+    description: Mass-spectrometry workflows for metabolite and lipid profiling.
     topics: [metabolomics, lipidomics, mass-spectrometry]
 
-  - name: Cell Painting & High-Content Screening
+  - name: Cell Painting and High-Content Screening
     slug: cell-painting
-    icon: material/palette
-    description: Cell Painting assays, CellProfiler pipelines, plate maps, profiling.
+    description: Cell Painting assays, CellProfiler pipelines, plate layouts and morphological profiling.
     topics: [cell-painting, cellpainting, cellprofiler, cytomining, high-content-screening, hcs, platemap]
 
-  - name: Microscopy & Image Analysis
+  - name: Imaging and Image Analysis
     slug: image-analysis
-    icon: material/microscope
-    description: AFM, fenestrae, organoids, segmentation and other image quantification.
+    description: Quantitative microscopy, including AFM, fenestration analysis, organoids and segmentation.
     topics: [image-analysis, microscopy, afm, fenestrae, organoids, segmentation, bodipy]
 
-  - name: Spatial & Multi-omics
+  - name: Spatial and Multi-omics
     slug: multiomics
-    icon: material/layers-triple
-    description: Spatial transcriptomics, proteomics and integrated multi-omics.
+    description: Spatial transcriptomics, proteomics and integration across molecular layers.
     topics: [spatial-transcriptomics, spatial-omics, multiomics, multi-omics, proteomics]
 
-  - name: Machine Learning & AI
+  - name: Machine Learning
     slug: machine-learning
-    icon: material/robot-outline
-    description: Deep learning models and ML tools.
+    description: Statistical learning and deep-learning models applied to the group's data.
     topics: [machine-learning, deep-learning, ai]
 
-  - name: HPC, Containers & Infrastructure
+  - name: Computing Infrastructure
     slug: infrastructure
-    icon: material/server
-    description: Running on VSC/HPC, containers, lab hardware and utilities.
+    description: High-performance computing on VSC, software containers, instrument control and shared utilities.
     topics: [hpc, vsc, containers, singularity, apptainer, docker, bioreactor, infrastructure]

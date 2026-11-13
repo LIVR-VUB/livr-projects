@@ -10,6 +10,8 @@ Writes:
 Hand-written pages in docs/ (e.g. how-to-add.md) are left alone.
 """
 import argparse
+import hashlib
+from datetime import datetime
 import html
 import json
 import os
@@ -84,27 +86,56 @@ def clean(r):
 
 
 def esc(text):
-    return html.escape(text or "", quote=False)
+    return html.escape(text or "", quote=True)
 
 
-def card(p, cfg_by_topic):
-    lock = " :material-lock:{ title=\"Private\" }" if p["private"] else ""
-    desc = esc(p["description"]) or "_No description yet. Add one in the repo's About box._"
-    tags = " ".join(f"[`{t}`](all.md?tag={t})" for t in p["topics"]) or "_no tags_"
-    meta = " · ".join(x for x in [
-        f":material-code-tags: {p['language']}" if p["language"] else "",
-        f":material-update: {p['updated']}" if p["updated"] else "",
-    ] if x)
-    return (f"-   :material-github: **[{p['name']}]({p['url']})**{lock}\n\n"
-            f"    ---\n\n"
-            f"    {desc}\n\n"
-            f"    {tags}\n\n"
-            f"    <small>{meta}</small>\n")
+def nice_date(iso):
+    try:
+        return datetime.strptime(iso, "%Y-%m-%d").strftime("%-d %b %Y")
+    except ValueError:
+        return iso
+
+
+def card(p, base):
+    """HTML project card. `base` is the relative path to the site root."""
+    badge = '<span class="lp-badge">Private</span>' if p["private"] else ""
+    desc = esc(p["description"]) or '<span class="lp-muted">No description provided.</span>'
+    tags = "".join(f'<a class="lp-tag" href="{base}all/?tag={esc(t)}">{esc(t)}</a>' for t in p["topics"])
+    meta = " · ".join(x for x in [esc(p["language"]),
+                                  f"Updated {nice_date(p['updated'])}" if p["updated"] else ""] if x)
+    return (f'<article class="lp-card">'
+            f'<h3><a href="{esc(p["url"])}">{esc(p["name"])}</a>{badge}</h3>'
+            f'<p>{desc}</p>'
+            f'<div class="lp-tags">{tags}</div>'
+            f'<div class="lp-meta">{meta}</div>'
+            f'</article>')
+
+
+def grid(cards):
+    return '<div class="lp-grid">\n' + "\n".join(cards) + "\n</div>\n"
 
 
 def write(path, text):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
+
+
+SELF_HEAL = '''
+<script>
+/* If the browser used an outdated cached catalogue.js, load a fresh copy. */
+setTimeout(function () {
+  var box = document.getElementById("ID");
+  if (!box || box.dataset.ready) return;
+  var old = document.querySelector('script[src*="catalogue.js"]');
+  var s = document.createElement("script");
+  s.src = (old ? old.src.split("?")[0] : "../assets/catalogue.js") + "?fresh=" + Date.now();
+  document.body.appendChild(s);
+  setTimeout(function () {
+    if (!box.dataset.ready) box.innerHTML = "The page could not be loaded. Please refresh with Ctrl+Shift+R.";
+  }, 4000);
+}, 1500);
+</script>
+'''
 
 
 # --------------------------------------------------------------------- main
@@ -127,11 +158,10 @@ def main():
     if not a.from_json:
         for p in projects:
             if not p["description"]:
-                p["summary_from_readme"] = True
                 p["description"] = readme_summary(org, p["name"], token)
     projects.sort(key=lambda p: p["updated"], reverse=True)
 
-    # group
+    # ---- group by research area
     groups, placed = [], set()
     for c in cfg["categories"]:
         want = {t.lower() for t in c["topics"]}
@@ -142,83 +172,99 @@ def main():
         groups.append((c, members))
     untagged = [p for p in projects if p["name"] not in placed]
 
-    # category pages
+    # ---- one page per research area
     for c, members in groups:
-        body = [f"# :{c['icon'].replace('/', '-')}: {c['name']}\n",
-                f"{c.get('description', '')}\n",
-                f"**{len(members)} project{'s' * (len(members) != 1)}** · "
-                f"tags: " + ", ".join(f"`{t}`" for t in c["topics"]) + "\n"]
+        body = [f"# {c['name']}\n",
+                f'<p class="lp-lead">{esc(c.get("description", ""))}</p>\n',
+                f'<p class="lp-sub">{len(members)} {"repository" if len(members) == 1 else "repositories"}'
+                f' · Topics: ' + ", ".join(f"<code>{esc(t)}</code>" for t in c["topics"]) + "</p>\n"]
         if members:
-            body.append('<div class="grid cards" markdown>\n')
-            body += [card(p, None) for p in members]
-            body.append("</div>\n")
+            body.append(grid(card(p, "../") for p in members))
         else:
-            body.append('!!! info "No projects yet"\n    Tag a repo with one of the topics above and it will appear here.\n')
+            body.append('<p class="lp-empty">No public repositories in this area yet. '
+                        'Repositories appear here once they carry one of the topics listed above.</p>\n')
         write(DOCS / f"{c['slug']}.md", "\n".join(body))
 
-    # untagged page
-    body = ["# :material-tag-off-outline: Not yet tagged\n",
-            "These repos have no tag that matches a group. "
-            "Add a topic to them on GitHub (gear icon next to **About**) "
-            "and they will move to the right page at the next rebuild.\n"]
-    if untagged:
-        body.append('<div class="grid cards" markdown>\n')
-        body += [card(p, None) for p in untagged]
-        body.append("</div>\n")
-    else:
-        body.append('!!! success "Everything is tagged :tada:"\n')
+    # ---- unclassified
+    body = ["# Unclassified repositories\n",
+            '<p class="lp-lead">These repositories do not yet carry a topic that maps to a research area. '
+            'Add a topic on GitHub and they will be classified at the next update. '
+            'See <a href="../how-to-add/">Contributing</a>.</p>\n']
+    body.append(grid(card(p, "../") for p in untagged) if untagged
+                else '<p class="lp-empty">All repositories are classified.</p>\n')
     write(DOCS / "untagged.md", "\n".join(body))
 
-    # home page
-    tiles = []
+    # ---- home page
+    def repos(n):
+        return f"{n} {'repository' if n == 1 else 'repositories'}"
+
+    areas = []
     for c, members in groups:
-        tiles.append(f"-   :{c['icon'].replace('/', '-')}:{{ .lg .middle }} **[{c['name']}]({c['slug']}.md)**\n\n"
-                     f"    ---\n\n    {c.get('description', '')}\n\n"
-                     f"    [:octicons-arrow-right-24: {len(members)} project{'s' * (len(members) != 1)}]({c['slug']}.md)\n")
+        areas.append(f'<a class="lp-area" href="{c["slug"]}/">'
+                     f'<span class="lp-area-name">{esc(c["name"])}</span>'
+                     f'<span class="lp-area-desc">{esc(c.get("description", ""))}</span>'
+                     f'<span class="lp-area-count">{repos(len(members))}</span></a>')
     if untagged:
-        tiles.append(f"-   :material-tag-off-outline:{{ .lg .middle }} **[Not yet tagged](untagged.md)**\n\n"
-                     f"    ---\n\n    Repos without a matching tag.\n\n"
-                     f"    [:octicons-arrow-right-24: {len(untagged)} project{'s' * (len(untagged) != 1)}](untagged.md)\n")
-    recent = "\n".join(f"| [{p['name']}]({p['url']}) | {esc(p['description'])[:110]} | {p['updated']} |"
-                       for p in projects[:8])
+        areas.append(f'<a class="lp-area lp-area-muted" href="untagged/">'
+                     f'<span class="lp-area-name">Unclassified</span>'
+                     f'<span class="lp-area-desc">Repositories without a research-area topic.</span>'
+                     f'<span class="lp-area-count">{repos(len(untagged))}</span></a>')
+    recent = "\n".join(
+        f'<tr><td><a href="{esc(p["url"])}">{esc(p["name"])}</a></td>'
+        f'<td>{esc(p["description"])[:120]}</td><td class="lp-nowrap">{nice_date(p["updated"])}</td></tr>'
+        for p in projects[:8])
+    n_topics = len({t for p in projects for t in p["topics"]})
+
     home = f"""---
 hide:
   - navigation
   - toc
 ---
 
-# LIVR project catalogue
+<div class="lp-hero" markdown>
+<p class="lp-eyebrow">Liver Cell Biology Research Group · Vrije Universiteit Brussel</p>
+<h1>Project Catalogue</h1>
+<p class="lp-hero-text">A single index of the group's analysis pipelines, research software and
+computational resources, organised by research area. Use it to find existing work before starting
+something new, and to locate the code behind a dataset, figure or publication.</p>
+<div class="lp-actions">
+<a class="lp-btn lp-btn-primary" href="all/">Browse all repositories</a>
+<a class="lp-btn" href="members/">Members area</a>
+</div>
+</div>
 
-All code projects of the **Liver Cell Biology Research Group (LIVR, VUB)** in one place, grouped by type.
-Press ++slash++ or click the search box to search all project names and descriptions,
-or open [**All projects**](all.md) to filter by tag.
+<div class="lp-stats">
+<div><strong>{len(projects)}</strong><span>public repositories</span></div>
+<div><strong>{len(groups)}</strong><span>research areas</span></div>
+<div><strong>{n_topics}</strong><span>topics</span></div>
+<div><strong>Hourly</strong><span>automatic updates</span></div>
+</div>
 
-**{len(projects)} projects** · **{len({t for p in projects for t in p['topics']})} tags** · rebuilt automatically every hour
+## Research areas
 
-!!! info "LIVR members: see all projects, including private ones"
-    Most of our projects are private. Lab members see **all** of them, grouped the same way, in
-    [**LIVR members :material-lock:**](members.md) (sign in with your own GitHub token,
-    [how to get one](members-token.md)).
-
-## Browse by type
-
-<div class="grid cards" markdown>
-
-{chr(10).join(tiles)}
+<div class="lp-areas">
+{chr(10).join(areas)}
 </div>
 
 ## Recently updated
 
-| Project | What it is | Last update |
-|---|---|---|
+<table class="lp-table">
+<thead><tr><th>Repository</th><th>Description</th><th>Last update</th></tr></thead>
+<tbody>
 {recent}
+</tbody>
+</table>
 
-[See all projects :octicons-arrow-right-24:](all.md){{ .md-button }}
-[How to add your project :octicons-arrow-right-24:](how-to-add.md){{ .md-button }}
+## Internal repositories
+
+Most of the group's work is held in private repositories. Members of the LIVR-VUB organisation
+can view the complete index, including private repositories, in the [Members area](members.md)
+after signing in with a personal GitHub access token. Setting up a token takes about two minutes;
+see [Access tokens](members-token.md).
 """
     write(DOCS / "index.md", home)
 
-    # all-projects page (interactive, rendered by docs/assets/catalogue.js)
+    # ---- all repositories (interactive)
     write(DOCS / "assets" / "projects.json",
           json.dumps({"org": org, "categories": [c["name"] for c, _ in groups],
                       "projects": projects}, indent=1))
@@ -228,29 +274,15 @@ hide:
   - toc
 ---
 
-# All projects
+# Repository index
 
-Type to search, click a type or a tag to filter. Click a tag again to remove it.
+<p class="lp-lead">All public repositories of the group. Search by name, description or topic,
+or narrow the list by research area and topic.</p>
 
 <div id="catalogue">Loading…</div>
+""" + SELF_HEAL.replace("ID", "catalogue"))
 
-<script>
-/* Self-heal: if the browser used an old cached catalogue.js, load a fresh copy. */
-setTimeout(function () {
-  var box = document.getElementById("catalogue");
-  if (!box || box.dataset.ready) return;
-  var old = document.querySelector('script[src*="catalogue.js"]');
-  var s = document.createElement("script");
-  s.src = (old ? old.src.split("?")[0] : "../assets/catalogue.js") + "?fresh=" + Date.now();
-  document.body.appendChild(s);
-  setTimeout(function () {
-    if (!box.dataset.ready) box.innerHTML = "Still loading. Please press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> to refresh.";
-  }, 4000);
-}, 1500);
-</script>
-""")
-
-    # members-only page: data is fetched in the browser with the member's token
+    # ---- members area (data fetched in the browser with the member's token)
     write(DOCS / "assets" / "categories.json", json.dumps({
         "org": org, "exclude": sorted(excluded),
         "categories": [{"name": c["name"], "slug": c["slug"], "topics": c["topics"]} for c in cfg["categories"]],
@@ -263,43 +295,27 @@ search:
   exclude: true
 ---
 
-# :material-lock: LIVR members
+# Members area
 
 <div id="members">Loading…</div>
 
-<noscript>This page needs JavaScript.</noscript>
+<noscript>This page requires JavaScript.</noscript>
+""" + SELF_HEAL.replace("ID", "members"))
 
-<script>
-/* Self-heal: if the browser used an old cached catalogue.js, load a fresh copy. */
-setTimeout(function () {
-  var box = document.getElementById("members");
-  if (!box || box.dataset.ready) return;
-  var old = document.querySelector('script[src*="catalogue.js"]');
-  var s = document.createElement("script");
-  s.src = (old ? old.src.split("?")[0] : "../assets/catalogue.js") + "?fresh=" + Date.now();
-  document.body.appendChild(s);
-  setTimeout(function () {
-    if (!box.dataset.ready) box.innerHTML = "Still loading. Please press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> to refresh.";
-  }, 4000);
-}, 1500);
-</script>
-""")
-
-    # mkdocs.yml = base + nav
-    nav = ["nav:", "  - Home: index.md", "  - All projects: all.md", "  - By type:"]
+    # ---- mkdocs.yml = base + nav (+ cache-busting for our own assets)
+    nav = ["nav:", "  - Overview: index.md", "  - Repository index: all.md", "  - Research areas:"]
     nav += [f"      - {c['name']}: {c['slug']}.md" for c, _ in groups]
-    nav += ["      - Not yet tagged: untagged.md", "  - How to add a project: how-to-add.md",
-            "  - 🔒 LIVR members:", "      - All LIVR projects: members.md", "      - Get a token: members-token.md"]
+    nav += ["      - Unclassified: untagged.md",
+            "  - Contributing: how-to-add.md",
+            "  - Members area:", "      - Internal repositories: members.md", "      - Access tokens: members-token.md"]
     base = (ROOT / "mkdocs.base.yml").read_text()
-    # cache-busting: browsers keep old JS/CSS for ~10 min on GitHub Pages
-    import hashlib
     for asset in ("catalogue.js", "catalogue.css"):
         h = hashlib.sha1((DOCS / "assets" / asset).read_bytes()).hexdigest()[:8]
         base = base.replace(f"assets/{asset}", f"assets/{asset}?v={h}")
     (ROOT / "mkdocs.yml").write_text(
         "# GENERATED by scripts/generate.py - edit mkdocs.base.yml instead\n"
         + base.rstrip() + "\n\n" + "\n".join(nav) + "\n")
-    print(f"{len(projects)} projects, {len(groups)} groups, {len(untagged)} untagged")
+    print(f"{len(projects)} projects, {len(groups)} areas, {len(untagged)} unclassified")
 
 
 if __name__ == "__main__":

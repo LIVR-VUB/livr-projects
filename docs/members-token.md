@@ -1,45 +1,45 @@
-# :material-key: Get a token for the members section
+# Access tokens
 
-The [LIVR members](members.md) page shows all LIVR-VUB projects, private ones too. To see them, your browser needs a **GitHub token**: a read-only key that proves you are a LIVR member. Each member makes **their own** token. It takes about 2 minutes and you only do it once (until it expires).
+The [Members area](members.md) lists all repositories of the LIVR-VUB organisation, including private ones. Access requires a personal GitHub access token: a read-only credential that identifies you to GitHub. Each member creates their own token. Setup takes about two minutes and needs to be repeated only when the token expires.
 
-!!! warning "Please don't share tokens"
-    A token is like a password. Use your own, so access can be removed for one person without breaking it for everyone.
+!!! warning "Use a personal token"
+    A token should be treated like a password. Do not share it with colleagues or include it in code, messages or presentations. Personal tokens allow access to be revoked for one person without affecting others.
 
-## Create the token
+## Creating a token
 
-1. Open **[github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new)** (you must be logged in to GitHub).
-2. **Token name:** `LIVR catalogue`
-3. **Resource owner:** choose **LIVR-VUB** (not your own name). This is the most important step.
-4. **Expiration:** pick a date, e.g. 1 year.
-5. **Repository access:** **All repositories**.
-6. **Permissions → Repositories → Add permissions:**
-    - **Metadata**: Read-only (needed; lists the repos and their tags)
-    - **Contents**: Read-only (optional; lets the page show a summary from the README when a repo has no description)
-7. Click **Generate token** and **copy** it (it starts with `github_pat_`). GitHub shows it only once.
+1. Sign in to GitHub and open [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new).
+2. **Token name:** `LIVR Project Catalogue`.
+3. **Resource owner:** select **LIVR-VUB**. This setting is essential; a token owned by your personal account cannot list the organisation's private repositories.
+4. **Expiration:** choose a date, for example one year from today.
+5. **Repository access:** select **All repositories**.
+6. **Permissions → Repository permissions:**
+    - **Metadata:** Read-only (required; lists repositories and their topics).
+    - **Contents:** Read-only (optional; allows a summary to be taken from the README when a repository has no description).
+7. Select **Generate token** and copy the value, which begins with `github_pat_`. GitHub displays it only once.
 
-The token is **read-only**. It cannot change, delete or push anything.
+The token is read-only and cannot modify, delete or push to any repository.
 
-## Use it
+## Signing in
 
-Go to [LIVR members](members.md), paste the token and click **Show LIVR projects**.
+Open the [Members area](members.md), paste the token and select **Sign in**.
 
-- By default the token is forgotten when you close the tab.
-- Tick **Remember on this device** on your own laptop so you don't have to paste it again.
-- Click **Sign out** to remove it from the browser.
+- By default, the token is discarded when the browser tab is closed.
+- Select **Keep me signed in on this device** on a personal computer to avoid re-entering it.
+- Select **Sign out** to remove the token from the browser.
 
-The token stays in your browser and is sent only to `api.github.com`. This website never receives it.
+The token is stored only in your browser and is sent exclusively to `api.github.com`. It is never transmitted to this website.
 
 ## Troubleshooting
 
-| You see | What to do |
+| Message | Resolution |
 |---|---|
-| *"not valid or has expired"* | Make a new token (steps above). |
-| *"not (yet) approved for LIVR-VUB"* | The org may require an owner to approve new tokens. Ask a LIVR-VUB owner to approve it under **LIVR-VUB → Settings → Personal access tokens → Pending requests**. |
-| *"cannot see the LIVR-VUB organization"* | You chose your own account as **Resource owner**. Make a new token with **LIVR-VUB**. |
-| *"shows no private repos"* | Same as above, or your GitHub account is not yet a member of LIVR-VUB. Ask an owner to add you. |
+| The token is invalid or has expired | Create a new token as described above. |
+| The token has not been approved for LIVR-VUB | An organisation owner must approve the request under **LIVR-VUB → Settings → Personal access tokens → Pending requests**. |
+| The token has no access to LIVR-VUB | The resource owner was set to your personal account. Create a new token with **LIVR-VUB** as resource owner. |
+| No private repositories are visible | The token may still await approval, or your account may not yet be a member of LIVR-VUB. Contact an organisation owner. |
 
-??? info "For org owners: one-time settings"
-    In **LIVR-VUB → Settings → Personal access tokens**:
+??? note "Organisation settings (owners only)"
+    Under **LIVR-VUB → Settings → Personal access tokens**:
 
-    - **Fine-grained tokens:** *Allow access via fine-grained personal access tokens*.
-    - **Require approval:** your choice. With approval on, you approve each member's token once.
+    - **Fine-grained personal access tokens:** allow access.
+    - **Approval:** optionally require approval, in which case each member's token is approved once.

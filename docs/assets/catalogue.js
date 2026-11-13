@@ -25,20 +25,23 @@
     return n;
   }
 
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const niceDate = iso => { const [y, m, d] = iso.split("-"); return y && m && d ? `${+d} ${MONTHS[+m - 1]} ${y}` : iso; };
+
   // ----------------------------------------------- shared filter renderer
   function renderCatalogue(root, data, opts = {}) {
     const params = new URLSearchParams(location.search);
     const state = { q: "", type: params.get("type") || "", tags: new Set(params.getAll("tag")) };
-    const UNTAGGED = "Not yet tagged";
+    const UNTAGGED = "Unclassified";
 
-    const search = el("input", { class: "cat-search md-input", type: "search", placeholder: "Search name, description or tag…" });
+    const search = el("input", { class: "cat-search md-input", type: "search", placeholder: "Search by name, description or topic" });
     const types = el("div", { class: "cat-chips" });
     const tags = el("div", { class: "cat-chips" });
     const count = el("p", { class: "cat-count" });
     const list = el("div", { class: "cat-list" });
     root.replaceChildren(...(opts.header ? [opts.header] : []), search,
-      el("div", { class: "cat-label" }, "Type"), types,
-      el("div", { class: "cat-label" }, "Tags"), tags, count, list);
+      el("div", { class: "cat-label" }, "Research area"), types,
+      el("div", { class: "cat-label" }, "Topic"), tags, count, list);
     search.addEventListener("input", () => { state.q = search.value.toLowerCase(); update(); });
 
     const chip = (label, active, onclick, n) =>
@@ -70,18 +73,18 @@
       tags.replaceChildren(...tagList.map(t => chip(t, state.tags.has(t), () => toggleTag(t), tagCounts[t])));
 
       const shown = data.projects.filter(matches);
-      count.textContent = `${shown.length} of ${data.projects.length} projects`;
+      count.textContent = shown.length === data.projects.length ? `${shown.length} repositories` : `Showing ${shown.length} of ${data.projects.length} repositories`;
       list.replaceChildren(...shown.map(p => el("article", { class: "cat-card" },
         el("h3", {}, el("a", { href: p.url, target: "_blank", rel: "noopener" }, p.name),
-          p.private ? el("span", { class: "cat-private", title: "Private repository" }, "🔒 private") : null),
-        el("p", {}, p.description || el("em", {}, "No description yet.")),
+          p.private ? el("span", { class: "cat-private", title: "Private repository" }, "Private") : null),
+        el("p", {}, p.description || el("span", { class: "lp-muted" }, "No description provided.")),
         el("div", { class: "cat-tags" }, p.topics.map(t => el("button", {
           class: "cat-tag" + (state.tags.has(t) ? " is-active" : ""), onclick: () => toggleTag(t)
         }, t))),
-        el("div", { class: "cat-meta" }, [p.language, p.updated && "updated " + p.updated,
-          (p.categories || []).join(" · ")].filter(Boolean).join("  •  "))
+        el("div", { class: "cat-meta" }, [p.language, p.updated && "Updated " + niceDate(p.updated),
+          (p.categories || []).join(", ")].filter(Boolean).join(" · "))
       )));
-      if (!shown.length) list.append(el("p", {}, "No project matches these filters."));
+      if (!shown.length) list.append(el("p", { class: "lp-empty" }, "No repositories match the current filters."));
     }
     update();
     return update;
@@ -120,7 +123,7 @@
   }
 
   function loginForm(root, cfg, message) {
-    const input = el("input", { class: "cat-search md-input", type: "password", placeholder: "Paste your GitHub token (github_pat_… or ghp_…)", autocomplete: "off" });
+    const input = el("input", { class: "cat-search md-input", type: "password", placeholder: "Personal access token (github_pat_…)", autocomplete: "off" });
     const remember = el("input", { type: "checkbox", id: "livr-remember" });
     const go = async ev => {
       ev.preventDefault();
@@ -130,16 +133,17 @@
       loadMembers(root, cfg);
     };
     root.replaceChildren(el("form", { class: "livr-login", onsubmit: go },
-      el("h2", {}, "🔒 LIVR members only"),
-      el("p", {}, "This section lists ", el("strong", {}, "all"), " LIVR-VUB projects, including private ones. " +
-        "Sign in with your own GitHub token: your browser then asks GitHub directly which repos you can see."),
-      message ? el("div", { class: "admonition warning" }, el("p", { class: "admonition-title" }, "Could not sign in"), el("p", {}, message)) : null,
+      el("h2", {}, "Sign in to view internal repositories"),
+      el("p", {}, "This area lists every repository of the LIVR-VUB organisation, including private repositories. " +
+        "Enter your personal GitHub access token. Your browser retrieves the list directly from GitHub; " +
+        "you will see exactly the repositories your GitHub account has access to."),
+      message ? el("div", { class: "livr-error" }, el("strong", {}, "Sign-in failed. "), message) : null,
       input,
-      el("label", { class: "livr-remember" }, remember, " Remember on this device (don't tick on shared computers)"),
-      el("button", { class: "md-button md-button--primary", type: "submit" }, "Show LIVR projects"),
-      el("p", { class: "livr-help" }, "No token yet? ",
-        el("a", { href: assetUrl("../members-token/") }, "Create one in 2 minutes →"),
-        " Your token stays in this browser and is only sent to api.github.com.")
+      el("label", { class: "livr-remember" }, remember, "Keep me signed in on this device (not recommended on shared computers)"),
+      el("button", { class: "md-button md-button--primary", type: "submit" }, "Sign in"),
+      el("p", { class: "livr-help" }, "No token yet? See ",
+        el("a", { href: assetUrl("../members-token/") }, "Access tokens"),
+        " for a two-minute setup. The token is stored only in this browser and is sent exclusively to api.github.com.")
     ));
     input.focus();
   }
@@ -147,7 +151,7 @@
   async function loadMembers(root, cfg) {
     const token = getToken();
     if (!token) return loginForm(root, cfg);
-    root.replaceChildren(el("p", {}, "Loading LIVR projects from GitHub…"));
+    root.replaceChildren(el("p", { class: "lp-muted" }, "Retrieving repositories from GitHub…"));
 
     let user, raw = [];
     try {
@@ -159,10 +163,10 @@
       }
     } catch (e) {
       clearToken();
-      const msg = e.status === 401 ? "This token is not valid or has expired. Create a new one."
-        : e.status === 403 && /SAML|approv|forbid/i.test(e.body) ? "This token is not (yet) approved for LIVR-VUB. An organization owner must approve it, or use a token with LIVR-VUB as resource owner."
-        : e.status === 404 ? "This token cannot see the LIVR-VUB organization. Set 'Resource owner' to LIVR-VUB when creating it."
-        : "GitHub answered: " + e.message + ". Try again or create a new token.";
+      const msg = e.status === 401 ? "The token is invalid or has expired. Please create a new token."
+        : e.status === 403 && /SAML|approv|forbid/i.test(e.body) ? "The token has not been approved for LIVR-VUB. An organisation owner needs to approve it."
+        : e.status === 404 ? "The token has no access to LIVR-VUB. When creating the token, set the resource owner to LIVR-VUB."
+        : "GitHub returned " + e.message + ". Please try again.";
       return loginForm(root, cfg, msg);
     }
 
@@ -183,11 +187,11 @@
 
     const signOut = el("button", { class: "md-button", onclick: () => { clearToken(); loginForm(root, cfg); } }, "Sign out");
     const header = el("div", { class: "livr-bar" },
-      el("span", {}, "Signed in as ", el("strong", {}, user.login), ` · ${projects.length} projects (${nPrivate} private)`),
+      el("span", {}, "Signed in as ", el("strong", {}, user.login), ` · ${projects.length} repositories, of which ${nPrivate} private`),
       signOut);
-    if (!nPrivate) header.append(el("div", { class: "admonition note" },
-      el("p", {}, "Your token shows no private repos. If you expected some, the token may lack LIVR-VUB access or still need approval by an org owner. See ",
-        el("a", { href: assetUrl("../members-token/") }, "token help"), ".")));
+    if (!nPrivate) header.append(el("div", { class: "livr-note" },
+      "No private repositories are visible with this token. It may lack access to LIVR-VUB or still await approval. See ",
+      el("a", { href: assetUrl("../members-token/") }, "Access tokens"), "."));
 
     const update = renderCatalogue(root, { categories: cfg.categories.map(c => c.name), projects }, { header });
 
