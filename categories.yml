@@ -1,16 +1,21 @@
 # Project types shown on the LIVR Project Catalogue (public pages and Members area).
 #
-# A repository belongs to a project type if
-#   - it carries ANY of the type's `topics` (GitHub topics, exact match), or
-#   - its name or description contains ANY of the type's `keywords`
-#     (case-insensitive text match; keep keywords specific to avoid false matches).
-# A repository can belong to several types. Repositories matching none are "Unclassified".
+# CLASSIFICATION IS BY TOPIC ONLY.
+#   A repository belongs to a project type if it carries ANY of the type's `topics`
+#   (GitHub topics, exact match). A repository can belong to several types.
+#   Repositories without a matching topic are listed as "Unclassified".
+#
+# `recommended` is the topic shown in the tag guide; ask members to use it.
+#
+# `keywords` never classify anything. They are only used to SUGGEST a type for
+#   unclassified repositories whose name or description contains one of them
+#   (case-insensitive). The suggestion is shown on the card with the recommended topic.
 #
 # To classify a repository: on GitHub, open it, click the gear icon next to "About"
-# and add one of the topics below. The public pages update hourly; the Members area
-# is always live.
+# and add a topic. The Members area updates immediately; the public pages hourly.
 #
-# Fields: name, slug (used in addresses), icon, colour, description, topics, keywords.
+# Fields: name, slug (used in addresses), icon, colour, description, recommended,
+#         topics, keywords.
 # Available icons: single-cell, bulk, dna, protein, flask, layers, cell-painting,
 #   microscope, plate, network, server, book, report, tag
 
@@ -32,6 +37,7 @@ categories:
     icon: single-cell
     colour: "#7c3aed"
     description: Single-cell and single-nucleus transcriptomics, including SPLiT-seq, clustering, annotation and cell atlases.
+    recommended: scrna-seq
     topics: [scrna-seq, scrnaseq, single-cell, snrna-seq, splitseq, split-seq, hsc-atlas, cell-atlas]
     keywords: [scrna, single-cell, single cell, splitseq, split-seq]
 
@@ -40,6 +46,7 @@ categories:
     icon: bulk
     colour: "#2563eb"
     description: Bulk transcriptomics, including QuantSeq, differential expression, enrichment and deconvolution.
+    recommended: bulkrnaseq
     topics: [bulkrnaseq, bulk-rna-seq, rna-seq, rnaseq, quantseq, deconvolution, transcriptomics]
     keywords: [bulk rna, bulkrna, quantseq, rna-seq, rnaseq]
 
@@ -48,6 +55,7 @@ categories:
     icon: protein
     colour: "#db2777"
     description: Mass-spectrometry proteomics and protein-level analyses.
+    recommended: proteomics
     topics: [proteomics, bulkproteomics, bulk-proteomics]
     keywords: [proteomic]
 
@@ -56,6 +64,7 @@ categories:
     icon: flask
     colour: "#d97706"
     description: Metabolite and lipid profiling by mass spectrometry.
+    recommended: metabolomics
     topics: [metabolomics, lipidomics, mass-spectrometry]
     keywords: [metabolomic, lipidomic]
 
@@ -64,6 +73,7 @@ categories:
     icon: layers
     colour: "#0d9488"
     description: Integration of transcriptomic, proteomic, metabolomic and imaging data.
+    recommended: multiomics
     topics: [multiomics, multi-omics, bulk-omics, spatial-transcriptomics, spatial-omics]
     keywords: [multiomic, multi-omic]
 
@@ -72,6 +82,7 @@ categories:
     icon: cell-painting
     colour: "#c026d3"
     description: Cell Painting assays, CellProfiler and cytomining pipelines, and image-based morphological profiling.
+    recommended: cellpainting
     topics: [cellpainting, cell-painting, cellprofiler, cytomining, image-based-profiling, high-content-screening, high-throughput, hcs]
     keywords: [cell painting, cellpainting, cytomining, cellprofiler, _cp_]
 
@@ -80,6 +91,7 @@ categories:
     icon: microscope
     colour: "#0891b2"
     description: Quantitative microscopy and image processing, including segmentation, AFM and lipid-droplet analysis.
+    recommended: image-analysis
     topics: [image-analysis, image-processing, microscopy, cellpose, cell-analysis, segmentation, afm, fenestrae, organoids, bodipy]
     keywords: [cellpose, segmentation, bodipy, afm, fenestra, organoid, microscop]
 
@@ -88,6 +100,7 @@ categories:
     icon: plate
     colour: "#16a34a"
     description: Plate layouts, well maps and small utilities that support experiments at the bench.
+    recommended: platemap
     topics: [platemap, plate-tools, 96well, 384well, lab-tools]
     keywords: [platemap, plate map, plate-map]
 
@@ -96,6 +109,7 @@ categories:
     icon: network
     colour: "#4f46e5"
     description: Machine-learning and deep-learning models applied to the group's data.
+    recommended: machine-learning
     topics: [machine-learning, deep-learning, ai, ml]
     keywords: [machine learning, deep learning, -ml, _ml]
 
@@ -104,6 +118,7 @@ categories:
     icon: server
     colour: "#475569"
     description: Running analyses on the VSC/HPC cluster, Singularity and Docker containers, and workflow tooling.
+    recommended: hpc
     topics: [hpc, hpc-containers, singularity-container, singularity, apptainer, docker, containers, vsc, hydra]
     keywords: [hpc, singularity, apptainer, container]
 
@@ -112,6 +127,7 @@ categories:
     icon: book
     colour: "#ea580c"
     description: Foundational repositories, shared tools, templates and onboarding material for new members.
+    recommended: foundational-repository
     topics: [livr-onboarding, foundational-repository, tools, basic-tools, general, template, livr]
     keywords: [onboarding, template]
 
@@ -120,5 +136,6 @@ categories:
     icon: report
     colour: "#0f766e"
     description: Final analysis versions and code accompanying manuscripts and reports.
+    recommended: final-version
     topics: [jhep-reports, final-version, publication, manuscript, paper]
     keywords: [manuscript, publication]

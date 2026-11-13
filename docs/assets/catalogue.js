@@ -31,15 +31,31 @@
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   const iconBox = (style, cls = "lp-icon") => el("span", { class: cls, style: `--c:${style.colour}`, html: style.icon });
 
-  // Classify a project: topics (exact) or keywords (in name/description).
+  // Classification is by topic only. Keywords in the name/description only
+  // produce suggestions for repositories that are still unclassified.
   function classify(projects, cfg) {
     for (const p of projects) {
       const own = new Set(p.topics.map(t => t.toLowerCase()));
+      p.categories = cfg.categories.filter(c => (c.topics || []).some(t => own.has(t.toLowerCase()))).map(c => c.name);
       const text = (p.name + " " + (p.description || "")).toLowerCase();
-      p.categories = cfg.categories.filter(c =>
-        (c.topics || []).some(t => own.has(t.toLowerCase())) ||
-        (c.keywords || []).some(k => text.includes(k.toLowerCase()))).map(c => c.name);
+      p.suggested = p.categories.length ? [] : cfg.categories
+        .filter(c => (c.keywords || []).some(k => text.includes(k.toLowerCase())))
+        .map(c => ({ name: c.name, topic: c.recommended || c.topics[0] }));
     }
+  }
+
+  // Click-to-copy topic chip.
+  function copyChip(topic, label) {
+    const b = el("button", { class: "lp-copy", type: "button", title: "Copy topic" }, topic);
+    b.addEventListener("click", async ev => {
+      ev.preventDefault();
+      try { await navigator.clipboard.writeText(topic); } catch (e) {
+        const t = el("textarea", {}, topic); document.body.append(t); t.select(); document.execCommand("copy"); t.remove();
+      }
+      b.classList.add("is-copied"); b.textContent = "Copied";
+      setTimeout(() => { b.classList.remove("is-copied"); b.textContent = topic; }, 1200);
+    });
+    return label ? el("span", { class: "lp-copy-wrap" }, b, el("span", { class: "lp-muted" }, ` ${label}`)) : b;
   }
   function styleOf(p, cfg) {
     const c = cfg.categories.find(c => c.name === (p.categories || [])[0]);
@@ -57,8 +73,27 @@
         class: "cat-tag" + (state && state.tags.has(t) ? " is-active" : ""),
         onclick: () => { if (!state) return; state.tags.has(t) ? state.tags.delete(t) : state.tags.add(t); update(); }
       }, t))),
+      p.suggested && p.suggested.length ? el("div", { class: "lp-suggest" },
+        el("span", { class: "lp-suggest-label" }, "Suggested topic"),
+        p.suggested.map(x => copyChip(x.topic, `(${x.name})`)),
+        el("a", { href: p.url, target: "_blank", rel: "noopener" }, "Add on GitHub")) : null,
       el("div", { class: "cat-meta" }, [p.language, p.updated && "Updated " + niceDate(p.updated),
         (p.categories || []).join(", ")].filter(Boolean).join(" · ")));
+  }
+
+  // Which topic to use for which project type.
+  function topicGuide(cfg, open) {
+    return el("details", { class: "lp-guide-box", open: !!open },
+      el("summary", {}, "Topic guide: which topic should I add?"),
+      el("p", { class: "lp-muted" }, "Classification uses GitHub topics only. Open the repository on GitHub, select the settings control next to ",
+        el("strong", {}, "About"), ", and add the recommended topic. Click a topic to copy it."),
+      el("div", { class: "lp-guide-table" },
+        cfg.categories.map(c => el("div", { class: "lp-guide-row" },
+          iconBox(c, "lp-icon lp-icon-sm"),
+          el("span", { class: "lp-guide-name" }, c.name),
+          el("span", {}, copyChip(c.recommended || c.topics[0])),
+          el("span", { class: "lp-guide-alt" }, "Also accepted: ",
+            (c.topics || []).filter(t => t !== (c.recommended || c.topics[0])).join(", ") || "none")))));
   }
 
   // ------------------------------------------- filterable list of projects
@@ -251,8 +286,8 @@
     if (slug === "all") return renderTypeView(app, { name: "All repositories",
       description: "Every repository you have access to in the LIVR-VUB organisation.", ...app.cfg.all }, app.projects, true);
     if (slug === "unclassified") return renderTypeView(app, { name: UNCLASSIFIED,
-      description: "Repositories without a topic or keyword that maps to a project type. Adding a topic on GitHub will classify them.",
-      ...app.cfg.unclassified }, app.projects.filter(p => !(p.categories || []).length));
+      description: "Repositories without a topic that maps to a project type. Where the name or description hints at a type, a suggested topic is shown on the card. Add it on GitHub and the repository is classified immediately.",
+      ...app.cfg.unclassified, guide: true }, app.projects.filter(p => !(p.categories || []).length));
     const c = app.cfg.categories.find(c => c.slug === slug);
     if (!c) { location.hash = ""; return; }
     renderTypeView(app, c, app.projects.filter(p => (p.categories || []).includes(c.name)));
@@ -281,7 +316,9 @@
       el("h3", { class: "lp-section" }, "Other views"),
       el("div", { class: "lp-type-grid" },
         typeTile(cfg.all, "All repositories", "The complete list, with search and filters by type and topic.", projects.length, "#type=all"),
-        nUn ? typeTile(cfg.unclassified, UNCLASSIFIED, "Repositories that still need a topic to be assigned to a type.", nUn, "#type=unclassified") : null));
+        nUn ? typeTile(cfg.unclassified, UNCLASSIFIED, "Repositories that still need a topic to be assigned to a type.", nUn, "#type=unclassified") : null),
+      el("h3", { class: "lp-section" }, "Classifying repositories"),
+      topicGuide(cfg, false));
 
     search.addEventListener("input", () => {
       const q = search.value.trim().toLowerCase();
@@ -308,7 +345,7 @@
       el("div", {}, el("h2", {}, style.name), el("p", {}, style.description || ""),
         el("span", { class: "lp-type-count" }, plural(list.length, "repository", "repositories"))));
     const body = el("div", {});
-    app.root.replaceChildren(signedInBar(app), crumbs, head, body);
+    app.root.replaceChildren(signedInBar(app), crumbs, head, style.guide ? topicGuide(app.cfg, false) : null, body);
     renderCatalogue(body, list, app.cfg, { hideTypes: !showTypes, placeholder: `Search within ${style.name}` });
   }
 

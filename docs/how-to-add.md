@@ -12,24 +12,24 @@ If no description is set, the catalogue uses the first paragraph of the reposito
 
 ## 2. Assign topics
 
-In the same **About** panel, add one or more **Topics**. Topics determine the project type under which the repository is listed. Recognised topics per type:
+In the same **About** panel, add one or more **Topics**. Topics alone determine the project type under which the repository is listed. Use the **recommended topic** (first column) where possible:
 
-| Project type | Topics |
-|---|---|
-| Single-cell RNA-seq | `scrna-seq`, `scrnaseq`, `single-cell`, `splitseq`, `hsc-atlas` |
-| Bulk RNA-seq | `bulkrnaseq`, `rna-seq`, `rnaseq`, `quantseq`, `deconvolution` |
-| Proteomics | `proteomics`, `bulkproteomics` |
-| Metabolomics and Lipidomics | `metabolomics`, `lipidomics`, `mass-spectrometry` |
-| Multi-omics | `multiomics`, `bulk-omics`, `spatial-transcriptomics` |
-| Cell Painting | `cellpainting`, `cellprofiler`, `cytomining`, `image-based-profiling`, `high-content-screening` |
-| Microscopy and Image Analysis | `image-analysis`, `image-processing`, `microscopy`, `cellpose`, `afm` |
-| Plate Design and Lab Tools | `platemap`, `plate-tools`, `96well` |
-| Machine Learning | `machine-learning`, `deep-learning` |
-| Computing and Containers | `hpc`, `hpc-containers`, `singularity-container`, `docker` |
-| Lab Resources and Onboarding | `livr-onboarding`, `foundational-repository`, `tools`, `template` |
-| Reports and Publications | `jhep-reports`, `final-version`, `publication` |
+| Project type | Recommended topic | Also accepted |
+|---|---|---|
+| Single-cell RNA-seq | `scrna-seq` | `scrnaseq`, `single-cell`, `splitseq`, `hsc-atlas` |
+| Bulk RNA-seq | `bulkrnaseq` | `rna-seq`, `rnaseq`, `quantseq`, `deconvolution` |
+| Proteomics | `proteomics` | `bulkproteomics` |
+| Metabolomics and Lipidomics | `metabolomics` | `lipidomics`, `mass-spectrometry` |
+| Multi-omics | `multiomics` | `bulk-omics`, `spatial-transcriptomics` |
+| Cell Painting | `cellpainting` | `cellprofiler`, `cytomining`, `image-based-profiling`, `high-content-screening` |
+| Microscopy and Image Analysis | `image-analysis` | `image-processing`, `microscopy`, `cellpose`, `afm` |
+| Plate Design and Lab Tools | `platemap` | `plate-tools`, `96well` |
+| Machine Learning | `machine-learning` | `deep-learning` |
+| Computing and Containers | `hpc` | `hpc-containers`, `singularity-container`, `docker` |
+| Lab Resources and Onboarding | `foundational-repository` | `livr-onboarding`, `tools`, `template` |
+| Reports and Publications | `final-version` | `jhep-reports`, `publication` |
 
-The complete mapping, including name keywords (for example `_CP_` for Cell Painting), is maintained in [`categories.yml`](https://github.com/LIVR-VUB/livr-projects/blob/main/categories.yml). Descriptive topics such as `lx2`, `ipsc`, `tgf-beta` or a researcher's name are encouraged as well; they become filters within each project type.
+Keywords in a repository's name or description never classify it; they only produce a *suggested topic* on unclassified cards. The complete mapping is maintained in [`categories.yml`](https://github.com/LIVR-VUB/livr-projects/blob/main/categories.yml). Descriptive topics such as `lx2`, `ipsc`, `tgf-beta` or a researcher's name are encouraged as well; they become filters within each project type.
 
 ## 3. Update schedule
 

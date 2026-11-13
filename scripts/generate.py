@@ -121,7 +121,11 @@ def card(p, base):
             f'<h3><a href="{esc(p["url"])}">{esc(p["name"])}</a>{badge}</h3></div>'
             f'<p>{desc}</p>'
             f'<div class="lp-tags">{tags}</div>'
-            f'<div class="lp-meta">{meta}</div>'
+            + (f'<div class="lp-suggest"><span>Suggested:</span> ' + " ".join(
+                f'<code title="Recommended topic for {esc(n)}">{esc(t)}</code> <span class="lp-muted">({esc(n)})</span>'
+                for n, t in p["suggested"]) + f' · <a href="{esc(p["url"])}">add on GitHub</a></div>'
+               if p.get("suggested") else "")
+            + f'<div class="lp-meta">{meta}</div>'
             f'</article>')
 
 
@@ -269,10 +273,8 @@ def main():
     for c in cfg["categories"]:
         CAT_STYLE[c["name"]] = (c.get("icon", "tag"), c.get("colour", "#003895"))
     def belongs(p, c):
-        if {t.lower() for t in c.get("topics", [])} & {t.lower() for t in p["topics"]}:
-            return True
-        text = (p["name"] + " " + (p["description"] or "")).lower()
-        return any(k.lower() in text for k in c.get("keywords", []))
+        # Classification is by topic only; keywords are used for suggestions.
+        return bool({t.lower() for t in c.get("topics", [])} & {t.lower() for t in p["topics"]})
     for c in cfg["categories"]:
         members = [p for p in projects if belongs(p, c)]
         for p in members:
@@ -280,6 +282,10 @@ def main():
             placed.add(p["name"])
         groups.append((c, members))
     untagged = [p for p in projects if p["name"] not in placed]
+    for p in untagged:
+        text = (p["name"] + " " + (p["description"] or "")).lower()
+        p["suggested"] = [(c["name"], c.get("recommended") or c["topics"][0]) for c in cfg["categories"]
+                          if any(k.lower() in text for k in c.get("keywords", []))]
 
     # ---- one page per research area
     for c, members in groups:
@@ -298,7 +304,8 @@ def main():
     # ---- unclassified
     body = ["# Unclassified repositories\n",
             '<p class="lp-lead">These repositories do not yet carry a topic that maps to a project type. '
-            'Add a topic on GitHub and they will be classified at the next update. '
+            'Where the name or description suggests a type, the recommended topic is shown on the card. '
+            'Add the topic on GitHub and the repository is classified at the next update. '
             'See <a href="../how-to-add/">Contributing</a>.</p>\n']
     body.append(grid(card(p, "../") for p in untagged) if untagged
                 else '<p class="lp-empty">All repositories are classified.</p>\n')
@@ -429,6 +436,7 @@ or narrow the list by project type and topic.</p>
         "org": org, "exclude": sorted(excluded),
         "categories": [{"name": c["name"], "slug": c["slug"], "description": c.get("description", ""),
                         "colour": c.get("colour", "#003895"), "icon": icon_svg(c.get("icon", "tag"), 24),
+                        "recommended": c.get("recommended") or c["topics"][0],
                         "topics": c.get("topics", []), "keywords": c.get("keywords", [])}
                        for c in cfg["categories"]],
         "unclassified": {"colour": UNCLASSIFIED[1], "icon": icon_svg(UNCLASSIFIED[0], 24)},
