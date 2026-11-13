@@ -223,7 +223,7 @@
 .lp-suggest-label, .lp-suggest > span:first-child { font-weight: 600; color: #9a3412; }
 .lp-suggest code { font-size: .62rem; }
 .lp-suggest a { font-weight: 600; margin-left: auto; }
-.lp-copy { cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: .62rem; padding: .08rem .45rem;
+.lp-copy { cursor: pointer; font-family: Consolas, "Courier New", monospace; font-size: .62rem; padding: .08rem .45rem;
   border-radius: 4px; border: 1px solid #fdba74; background: #fff; color: #9a3412; }
 .lp-copy:hover { background: #ffedd5; }
 .lp-copy.is-copied { background: #16a34a; border-color: #16a34a; color: #fff; }
@@ -246,3 +246,72 @@
 .md-typeset details.lp-guide-box > summary::before { display: none; }
 .md-typeset details.lp-guide-box > summary::after { top: .75rem; right: 0; background-color: var(--lp-muted); }
 .md-typeset details.lp-guide-box[open] > summary { border-bottom: 1px solid var(--lp-line); margin-bottom: .6rem; }
+
+
+/* =====================================================================
+   Classic institutional style (overrides): Arial, square corners,
+   thin rules, no shadows or hover animations.
+   ===================================================================== */
+:root {
+  --md-text-font-family: Arial, Helvetica, sans-serif;
+  --md-code-font-family: Consolas, "Courier New", monospace;
+}
+body, input, button, .md-typeset, .md-header, .md-tabs, .md-nav, .md-search__input, .md-footer {
+  font-family: Arial, Helvetica, sans-serif;
+}
+.md-typeset code, .md-typeset kbd, .md-typeset pre, .lp-copy { font-family: Consolas, "Courier New", monospace; }
+.md-typeset { font-size: .78rem; line-height: 1.6; color: #222; }
+
+/* headings: conventional weights, no tight tracking */
+.md-typeset h1 { font-weight: 700; letter-spacing: 0; color: #1a1a1a; font-size: 1.7rem; }
+.md-typeset h2 { font-weight: 700; letter-spacing: 0; color: #1a1a1a; font-size: 1.15rem; border-bottom: 2px solid var(--lp-blue); }
+.md-typeset h3 { font-weight: 700; color: #1a1a1a; }
+.md-header__title { font-weight: 700; }
+
+/* square corners everywhere */
+.lp-hero, .lp-stats, .md-typeset a.lp-area, .md-typeset table.lp-table, .lp-card, .cat-card, .cat-search,
+.cat-chip, .cat-tag, .md-typeset a.lp-tag, .lp-badge, .cat-private, .livr-login, .livr-bar, .livr-error, .livr-note,
+.md-typeset .lp-btn, .md-search__form, .lp-panel, .lp-guide > div, .lp-bar, .lp-bar span, .md-typeset a.lp-type-tile,
+.lp-type-hero, .lp-suggest, .lp-copy, .md-typeset details.lp-guide-box, .md-typeset .md-button { border-radius: 2px; }
+.lp-icon, .lp-icon-sm, .lp-icon-lg, .lp-icon-xl { border-radius: 3px; box-shadow: none; }
+.lp-person img { border-radius: 2px; }
+
+/* no shadows, lifts or transitions */
+.md-typeset a.lp-area:hover, .md-typeset a.lp-type-tile:hover, .lp-card:hover, .cat-card:hover {
+  box-shadow: none; transform: none; }
+.md-typeset a.lp-area, .md-typeset a.lp-type-tile, .lp-card, .cat-card { transition: none; }
+.cat-search:focus { box-shadow: none; border-color: var(--lp-blue); }
+.md-header { box-shadow: none; border-bottom: 1px solid #d0d4da; }
+
+/* labels in normal case instead of small uppercase */
+.lp-eyebrow, .cat-label, .md-typeset h3.lp-section, .lp-badge, .cat-private {
+  text-transform: none; letter-spacing: 0; }
+.lp-eyebrow { font-size: .74rem; font-weight: 700; color: var(--lp-blue); }
+.cat-label { font-size: .7rem; font-weight: 700; color: #333; }
+.md-typeset h3.lp-section { font-size: .9rem; font-weight: 700; color: #1a1a1a; border-bottom: 1px solid #d0d4da; padding-bottom: .3rem; }
+.lp-badge, .cat-private { font-size: .6rem; font-weight: 700; color: #555; background: #eceff3; }
+
+/* hero: plain introduction instead of a tinted card */
+.lp-hero { background: none; border: 0; padding: .4rem 0 1.2rem; margin-bottom: 0; }
+.md-typeset .lp-hero h1 { font-size: 2rem; margin-top: .2em; }
+.lp-hero-text { font-size: .85rem; color: #333; }
+
+/* stats: simple ruled row */
+.lp-stats { border: 0; border-top: 1px solid #d0d4da; border-bottom: 1px solid #d0d4da; }
+.lp-stats > div { padding: .8rem 1rem .8rem 0; border-right: 0; }
+.lp-stats strong { font-size: 1.3rem; color: var(--lp-blue); }
+.lp-stats span { color: #555; }
+
+/* tiles, cards, panels: white with a thin grey rule */
+.md-typeset a.lp-area, .md-typeset a.lp-type-tile, .lp-card, .cat-card, .lp-panel { border-color: #d0d4da; }
+.md-typeset a.lp-area:hover, .md-typeset a.lp-type-tile:hover { border-color: var(--lp-blue); background: #fafbfc; }
+.lp-type-hero { background: #fff; border: 1px solid #d0d4da; border-left: 4px solid var(--c); }
+.lp-guide > div { background: #fff; border: 1px solid #d0d4da; border-top: 3px solid var(--lp-blue); }
+.lp-suggest { border-style: solid; }
+
+/* buttons */
+.md-typeset .lp-btn { font-weight: 700; }
+.md-typeset .md-button { font-weight: 700; }
+
+/* tables */
+.md-typeset table.lp-table th { background: #f0f2f5; }

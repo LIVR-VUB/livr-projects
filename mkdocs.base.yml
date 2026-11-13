@@ -12,9 +12,7 @@ theme:
   language: en
   logo: assets/img/livr-logo.png
   favicon: assets/img/favicon.png
-  font:
-    text: Inter
-    code: JetBrains Mono
+  font: false
   palette:
     scheme: default
     primary: custom
